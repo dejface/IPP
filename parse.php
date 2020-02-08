@@ -79,7 +79,8 @@ if (count($argv) != 1){
 $handle = fopen("C:\Users\orave\PhpstormProjects\IPP\Project1\lolik","r");
 $line = fgets($handle);
 $line = trim($line);
-if (strcmp($line, ".IPPcode20") != 0){
+$line = strtoupper($line);
+if (strcmp($line, ".IPPCODE20") != 0){
     fwrite(STDERR,"Wrong file header!\n");
     exit(21);
 }
@@ -98,7 +99,7 @@ do {
     $lineCorrection = preg_replace('/^\s*/',"",$lineCorrection);
 
     $instruction = preg_split('/[\s]+/',$lineCorrection);
-    $instructionToFind = array_search($instruction[0],$keywords);
+    $instructionToFind = array_search(strtoupper($instruction[0]),$keywords);
     $convert = $keywords[$instructionToFind];
     $orderCount += 1;
 if (trim($lineCorrection) != ""){
@@ -112,7 +113,7 @@ if (trim($lineCorrection) != ""){
                 //echo $instruction[0];
                 $insertInstruction = $xml->createElement("instruction");
                 $insertInstruction->setAttribute("order", $orderCount);
-                $insertInstruction->setAttribute("opcode", $instruction[0]);
+                $insertInstruction->setAttribute("opcode", strtoupper($instruction[0]));
                 $xmlProgram->appendChild($insertInstruction);
                 // echo $xml->saveXML();
             } else exit(23);
@@ -126,7 +127,7 @@ if (trim($lineCorrection) != ""){
             } else {
                 $insertInstruction = $xml->createElement("instruction");
                 $insertInstruction->setAttribute("order", $orderCount);
-                $insertInstruction->setAttribute("opcode", $instruction[0]);
+                $insertInstruction->setAttribute("opcode", strtoupper($instruction[0]));
                 $xmlProgram->appendChild($insertInstruction);
 
                 $insertArg1 = $xml->createElement("arg1", specialChars($instruction[1]));
@@ -144,7 +145,7 @@ if (trim($lineCorrection) != ""){
             } else {
                 $insertInstruction = $xml->createElement("instruction");
                 $insertInstruction->setAttribute("order", $orderCount);
-                $insertInstruction->setAttribute("opcode", $instruction[0]);
+                $insertInstruction->setAttribute("opcode", strtoupper($instruction[0]));
                 $xmlProgram->appendChild($insertInstruction);
 
                 $insertArg1 = $xml->createElement("arg1", specialChars($instruction[1]));
@@ -159,7 +160,7 @@ if (trim($lineCorrection) != ""){
             if (count($instruction) == 2) {
                 $insertInstruction = $xml->createElement("instruction");
                 $insertInstruction->setAttribute("order", $orderCount);
-                $insertInstruction->setAttribute("opcode", $instruction[0]);
+                $insertInstruction->setAttribute("opcode", strtoupper($instruction[0]));
                 $xmlProgram->appendChild($insertInstruction);
 
                 $symbol = checkSymbol($instruction[1]);
@@ -180,7 +181,7 @@ if (trim($lineCorrection) != ""){
             } else {
                 $insertInstruction = $xml->createElement("instruction");
                 $insertInstruction->setAttribute("order", $orderCount);
-                $insertInstruction->setAttribute("opcode", $instruction[0]);
+                $insertInstruction->setAttribute("opcode", strtoupper($instruction[0]));
                 $xmlProgram->appendChild($insertInstruction);
 
                 $insertArg1 = $xml->createElement("arg1", specialChars($instruction[1]));
@@ -213,7 +214,7 @@ if (trim($lineCorrection) != ""){
             } else {
                 $insertInstruction = $xml->createElement("instruction");
                 $insertInstruction->setAttribute("order", $orderCount);
-                $insertInstruction->setAttribute("opcode", $instruction[0]);
+                $insertInstruction->setAttribute("opcode", strtoupper($instruction[0]));
                 $xmlProgram->appendChild($insertInstruction);
 
                 $insertArg1 = $xml->createElement("arg1", specialChars($instruction[1]));
@@ -238,7 +239,7 @@ if (trim($lineCorrection) != ""){
             } else {
                 $insertInstruction = $xml->createElement("instruction");
                 $insertInstruction->setAttribute("order", $orderCount);
-                $insertInstruction->setAttribute("opcode", $instruction[0]);
+                $insertInstruction->setAttribute("opcode", strtoupper($instruction[0]));
                 $xmlProgram->appendChild($insertInstruction);
 
                 $insertArg1 = $xml->createElement("arg1", specialChars($instruction[1]));
@@ -257,7 +258,7 @@ if (trim($lineCorrection) != ""){
             } else {
                 $insertInstruction = $xml->createElement("instruction");
                 $insertInstruction->setAttribute("order", $orderCount);
-                $insertInstruction->setAttribute("opcode", $instruction[0]);
+                $insertInstruction->setAttribute("opcode", strtoupper($instruction[0]));
                 $xmlProgram->appendChild($insertInstruction);
 
                 $insertArg1 = $xml->createElement("arg1", specialChars($instruction[1]));
