@@ -90,6 +90,11 @@ if (array_key_exists("help",$arguments)){
     }
     echo "Parses input from STDIN to XML document output on stdout\nUsage:\n";
     echo "	--help - shows this help\n";
+    echo "	--stats File - stats will be written into 'file'\n";
+    echo "	--loc - number of lines with valid instructions (requires --stats File)\n";
+    echo "	--comments - number of comments (requires --stats File)\n";
+    echo "	--labels - number of labels (requires --stats File)\n";
+    echo "	--jumps -  number of (un)conditioned jumps, returns and calls (requires --stats File)\n";
     exit(0);
 }
 if(in_array("--stats", $argv) && !array_key_exists("stats", $arguments)){
@@ -106,9 +111,9 @@ if (array_key_exists("stats",$arguments)){
 
 if (!array_key_exists("stats",$arguments) &&
     (array_key_exists("loc",$arguments) ||
-    array_key_exists("comments",$arguments) ||
-    array_key_exists("labels",$arguments) ||
-    array_key_exists("jumps",$arguments))){
+        array_key_exists("comments",$arguments) ||
+        array_key_exists("labels",$arguments) ||
+        array_key_exists("jumps",$arguments))){
     exit(10);
 }
 
