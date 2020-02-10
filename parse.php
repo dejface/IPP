@@ -106,9 +106,9 @@ if (array_key_exists("stats",$arguments)){
 
 if (!array_key_exists("stats",$arguments) &&
     (array_key_exists("loc",$arguments) ||
-        array_key_exists("comments",$arguments) ||
-        array_key_exists("labels",$arguments) ||
-        array_key_exists("jumps",$arguments))){
+    array_key_exists("comments",$arguments) ||
+    array_key_exists("labels",$arguments) ||
+    array_key_exists("jumps",$arguments))){
     exit(10);
 }
 
@@ -336,16 +336,22 @@ do {
 $xml->formatOutput = true;
 echo $xml->saveXML();
 
-if (array_key_exists("loc",$arguments) && $isCreated){
-    fwrite($fileOut,"$loc\n");
-}
-if (array_key_exists("comments",$arguments) && $isCreated){
-    fwrite($fileOut,"$comments\n");
-}
-if (array_key_exists("labels",$arguments) && $isCreated){
-    fwrite($fileOut,"$labels\n");
-}
-if (array_key_exists("jumps",$arguments) && $isCreated){
-    fwrite($fileOut,"$jumps\n");
+foreach ($arguments as $key => $value) {
+    switch ($key){
+        case "loc":
+            fwrite($fileOut,"$loc\n");
+            break;
+        case "comments":
+            fwrite($fileOut,"$comments\n");
+            break;
+        case "labels":
+            fwrite($fileOut,"$labels\n");
+            break;
+        case "jumps":
+            fwrite($fileOut,"$jumps\n");
+            break;
+        case "stats":
+            break;
+    }
 }
 ?>
