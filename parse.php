@@ -20,7 +20,7 @@ function specialChars($str){
 }
 
 /*checks if the passed symbol is correct by using regular expressions
-/*function returns either string,int,bool, var or exits with code 23*/
+/*function returns either string,int,bool,var,nil or exits with code 23*/
 function checkSymbol($symb){
     if (preg_match('/^string@((\x5C\d{3})|[^\x23\s\x5C])*$/',$symb)){
         return (array("string" => substr(specialChars($symb),7)));
