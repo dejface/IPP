@@ -122,7 +122,7 @@ if (!array_key_exists("stats",$arguments) &&
 // handling header
 $line = fgets(STDIN);
 $line = preg_replace('/^\s*/',"",$line);
-$line = preg_replace('/\x23.*/',"",$line);
+$line = preg_replace('/#.*/',"",$line);
 $line = trim($line);
 $line = strtoupper($line);
 if (strcmp($line, ".IPPCODE20") != 0){
