@@ -9,13 +9,13 @@
  *
  */
 
-/*function which converts forbiden chars in XML to allowed ones*/
+/*function which converts forbidden chars in XML to allowed ones*/
 function specialChars($str){
-    $str = preg_replace('/&/', "&amp",$str);
-    $str = preg_replace('/>/', "&gt", $str);
-    $str = preg_replace('/</', "&lt", $str);
-    $str = preg_replace('/"/', "&quot", $str);
-    $str = preg_replace('/\'/', "&apos", $str);
+    $str = preg_replace('/&|(\\\\046)/', "&amp;",$str);
+    $str = preg_replace('/>|(\\\\076)/', "&gt;", $str);
+    $str = preg_replace('/<|(\\\\074)/', "&lt;", $str);
+    $str = preg_replace('/"|(\\\\042)/', "&quot;", $str);
+    $str = preg_replace('/\'|(\\\\047)/', "&apos;", $str);
     return $str;
 }
 
@@ -24,12 +24,14 @@ function specialChars($str){
 function checkSymbol($symb){
     if (preg_match('/^string@((\x5C\d{3})|[^\x23\s\x5C])*$/',$symb)){
         return (array("string" => substr(specialChars($symb),7)));
-    } else if (preg_match('/^(GF|LF|TF)\x40[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/',$symb)){
+    } else if (preg_match('/^(GF|LF|TF)@[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/',$symb)){
         return (array("var" => specialChars($symb)));
-    } else if (preg_match('/^bool\x40(true|false)$/',$symb)){
+    } else if (preg_match('/^bool@(true|false)$/',$symb)){
         return (array("bool" => substr($symb,5)));
-    } else if (preg_match('/^int\x40(\x2D|\x2B)?\d+$/',$symb)){
+    } else if (preg_match('/^int@(\-|\+)?\d+$/',$symb)){
         return (array("int" => substr($symb,4)));
+    } else if (preg_match('/^nil@nil$/',$symb)){
+        return (array("nil" => substr($symb,4)));
     } else {
         exit (23);
     }
@@ -133,7 +135,7 @@ $xml->appendChild($xmlProgram);
 
 do {
     $line = fgets(STDIN);
-    $lineCorrection = preg_replace('/\x23.*/',"",$line,-1,$count);
+    $lineCorrection = preg_replace('/#.*/',"",$line,-1,$count);
     if ($count) {
         $comments += $count;
     }
@@ -172,7 +174,7 @@ do {
             case "POPS":
                 if (count($instruction) != 2) {
                     exit(23);
-                } else if (!preg_match('/^(GF|LF|TF)\x40[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/', $instruction[1])) {
+                } else if (!preg_match('/^(GF|LF|TF)@[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/', $instruction[1])) {
                     exit(23);
                 } else {
                     $insertInstruction = $xml->createElement("instruction");
@@ -233,7 +235,7 @@ do {
             case "STRLEN":
             case "TYPE":
                 if ((count($instruction) != 3) ||
-                    (!preg_match('/^(GF|LF|TF)\x40[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/', $instruction[1]))) {
+                    (!preg_match('/^(GF|LF|TF)@[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/', $instruction[1]))) {
                     exit(23);
                 } else {
                     $insertInstruction = $xml->createElement("instruction");
@@ -265,7 +267,7 @@ do {
             case "GETCHAR":
             case "SETCHAR":
                 if ((count($instruction) != 4) ||
-                    (!preg_match('/^(GF|LF|TF)\x40[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/', $instruction[1]))) {
+                    (!preg_match('/^(GF|LF|TF)@[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/', $instruction[1]))) {
                     exit(23);
                 } else {
                     $insertInstruction = $xml->createElement("instruction");
@@ -289,7 +291,7 @@ do {
                 break;
             case "READ":
                 if ((count($instruction) != 3) ||
-                    (!preg_match('/^(GF|LF|TF)\x40[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/', $instruction[1]))
+                    (!preg_match('/^(GF|LF|TF)@[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/', $instruction[1]))
                     || (!preg_match('/^(int|bool|string)$/',$instruction[2]))) {
                     exit(23);
                 } else {
