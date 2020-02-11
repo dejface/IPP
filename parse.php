@@ -118,11 +118,31 @@ if (!array_key_exists("stats",$arguments) &&
         array_key_exists("jumps",$arguments))){
     exit(10);
 }
+//handling header
+$line = "";
+//while in front of header are blank lines, we ignore them
+while ($line === ""){
+    $line = fgets(STDIN);
+    $line = trim($line);
+}
 
-// handling header
-$line = fgets(STDIN);
 $line = preg_replace('/^\s*/',"",$line);
-$line = preg_replace('/#.*/',"",$line);
+$line = preg_replace('/#.*/',"",$line, -1, $count);
+if ($count){
+    do {
+        $comments += $count;
+        $first = substr($line,0,1); //storing the first char of line
+        if ($first === '.') break;
+        $line = fgets(STDIN);
+        $line = preg_replace('/^\s*/',"",$line);
+        $line = preg_replace('/#.*/',"",$line, -1, $count);
+        if ($count == 0 && $line != '.') break;
+    } while ($first != '.');
+}
+
+$line = preg_replace('/^\s*/',"",$line);
+$line = preg_replace('/#.*/',"",$line, -1, $count);
+if ($count) $comments+=$count;
 $line = trim($line);
 $line = strtoupper($line);
 if (strcmp($line, ".IPPCODE20") != 0){
