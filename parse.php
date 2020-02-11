@@ -119,7 +119,10 @@ if (!array_key_exists("stats",$arguments) &&
     exit(10);
 }
 
+// handling header
 $line = fgets(STDIN);
+$line = preg_replace('/^\s*/',"",$line);
+$line = preg_replace('/\x23.*/',"",$line);
 $line = trim($line);
 $line = strtoupper($line);
 if (strcmp($line, ".IPPCODE20") != 0){
@@ -128,25 +131,32 @@ if (strcmp($line, ".IPPCODE20") != 0){
 }
 unset($line);
 
+//creating XML header
 $xml = new DOMDocument("1.0","UTF-8");
 $xmlProgram = $xml->createElement("program");
 $xmlProgram->setAttribute("language","IPPcode20");
 $xml->appendChild($xmlProgram);
 
+//main loop
 do {
     $line = fgets(STDIN);
+    // matching comments and storing their count in var
     $lineCorrection = preg_replace('/#.*/',"",$line,-1,$count);
     if ($count) {
         $comments += $count;
     }
-
+    //replacing white spaces
     $lineCorrection = preg_replace('/\s*$/',"",$lineCorrection);
     $lineCorrection = preg_replace('/^\s*/',"",$lineCorrection);
 
+    //split a line by spaces into array
     $instruction = preg_split('/[\s]+/',$lineCorrection);
     $instructionToFind = array_search(strtoupper($instruction[0]),$keywords);
+    //convert instruction into "words"
     $convert = $keywords[$instructionToFind];
     $orderCount += 1;
+
+    //if instruction wasn't find, "NONE" is added to $convert
     if ($instructionToFind === false){
         $convert = "NONE";
         $orderCount -= 1;
@@ -343,6 +353,7 @@ do {
 $xml->formatOutput = true;
 echo $xml->saveXML();
 
+//writing stats into output file
 foreach ($arguments as $key => $value) {
     switch ($key){
         case "loc":
