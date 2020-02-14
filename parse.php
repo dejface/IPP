@@ -11,11 +11,11 @@
 
 /*function which converts forbidden chars in XML to allowed ones*/
 function specialChars($str){
-    $str = preg_replace('/&|(\\\\046)/', "&amp;",$str);
-    $str = preg_replace('/>|(\\\\076)/', "&gt;", $str);
-    $str = preg_replace('/<|(\\\\074)/', "&lt;", $str);
-    $str = preg_replace('/"|(\\\\042)/', "&quot;", $str);
-    $str = preg_replace('/\'|(\\\\047)/', "&apos;", $str);
+    $str = preg_replace('/&/', "&amp;",$str);
+    $str = preg_replace('/>/', "&gt;", $str);
+    $str = preg_replace('/</', "&lt;", $str);
+    $str = preg_replace('/"/', "&quot;", $str);
+    $str = preg_replace('/\'/', "&apos;", $str);
     return $str;
 }
 
@@ -77,7 +77,6 @@ $keywords = array("MOVE",
 
 $orderCount = 0;
 $comments = 0; $labels = 0; $jumps = 0; $loc = 0;
-$isCreated = false;
 
 /*processing arguments*/
 $longopts = array("help", "stats:", "loc", "comments", "jumps", "labels");
@@ -374,22 +373,23 @@ $xml->formatOutput = true;
 echo $xml->saveXML();
 
 //writing stats into output file
-foreach ($arguments as $key => $value) {
-    switch ($key){
-        case "loc":
+for ($i = 0; $i < $argc - 1; $i++) {
+    array_shift($argv);
+    switch ($argv[0]){
+        case "--loc":
             fwrite($fileOut,"$loc\n");
             break;
-        case "comments":
+        case "--comments":
             fwrite($fileOut,"$comments\n");
             break;
-        case "labels":
+        case "--labels":
             fwrite($fileOut,"$labels\n");
             break;
-        case "jumps":
+        case "--jumps":
             fwrite($fileOut,"$jumps\n");
             break;
-        case "stats":
-            break;
+        case "--stats:":
+            ;
     }
 }
 ?>
