@@ -20,9 +20,9 @@ function specialChars($str){
 }
 
 /*checks if the passed symbol is correct by using regular expressions
-/*function returns either string,int,bool,var,nil or exits with code 23*/
+/*function returns either string,int,bool, var, nil or exits with code 23*/
 function checkSymbol($symb){
-    if (preg_match('/^string@((\x5C\d{3})|[^\x23\s\x5C])*$/',$symb)){
+    if (preg_match('/^string@((\x5C\d{3})|[^\x23\s#])*$/',$symb)){
         return (array("string" => substr(specialChars($symb),7)));
     } else if (preg_match('/^(GF|LF|TF)@[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/',$symb)){
         return (array("var" => specialChars($symb)));
@@ -77,6 +77,7 @@ $keywords = array("MOVE",
 
 $orderCount = 0;
 $comments = 0; $labels = 0; $jumps = 0; $loc = 0;
+$labelsArray = array();
 
 /*processing arguments*/
 $longopts = array("help", "stats:", "loc", "comments", "jumps", "labels");
@@ -105,8 +106,6 @@ if (array_key_exists("stats",$arguments)){
     $fileOut = fopen($arguments["stats"], "w");
     if (!$fileOut){
         exit(12);
-    } else {
-        $isCreated = true;
     }
 }
 
@@ -117,20 +116,19 @@ if (!array_key_exists("stats",$arguments) &&
         array_key_exists("jumps",$arguments))){
     exit(10);
 }
-//handling header
+
 $line = "";
-//while in front of header are blank lines, we ignore them
+// handling header
 while ($line === ""){
     $line = fgets(STDIN);
     $line = trim($line);
 }
-
 $line = preg_replace('/^\s*/',"",$line);
 $line = preg_replace('/#.*/',"",$line, -1, $count);
 if ($count){
     do {
         $comments += $count;
-        $first = substr($line,0,1); //storing the first char of line
+        $first = substr($line,0,1);
         if ($first === '.') break;
         $line = fgets(STDIN);
         $line = preg_replace('/^\s*/',"",$line);
@@ -230,7 +228,10 @@ do {
                     $xmlProgram->appendChild($insertInstruction);
 
                     if (strtoupper($instruction[0]) === "LABEL"){
-                        $labels += 1;
+                        if (!in_array($instruction[1],$labelsArray)){
+                            $labelsArray[] = $instruction[1];
+                            $labels += 1;
+                        }
                     } else {
                         $jumps += 1;
                     }
