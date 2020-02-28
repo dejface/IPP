@@ -22,7 +22,7 @@ function specialChars($str){
 /*checks if the passed symbol is correct by using regular expressions
 /*function returns either string,int,bool, var, nil or exits with code 23*/
 function checkSymbol($symb){
-    if (preg_match('/^string@((\x5C\d{3})|[^\x23\s#])*$/',$symb)){
+    if (preg_match('/^string@((\x5C\d{3})|[^#\s\x5C])*$/',$symb)){
         return (array("string" => substr(specialChars($symb),7)));
     } else if (preg_match('/^(GF|LF|TF)@[A-Za-z_$&%*!?-][A-Za-z0-9_$&%*!?-]*$/',$symb)){
         return (array("var" => specialChars($symb)));
@@ -91,12 +91,12 @@ if (array_key_exists("help",$arguments)){
         exit(10);
     }
     echo "Parses input from STDIN to XML document output on stdout\nUsage:\n";
-    echo "	--help - shows this help\n";
-    echo "	--stats File - stats will be written into 'file'\n";
-    echo "	--loc - number of lines with valid instructions (requires --stats File)\n";
-    echo "	--comments - number of comments (requires --stats File)\n";
-    echo "	--labels - number of labels (requires --stats File)\n";
-    echo "	--jumps -  number of (un)conditioned jumps, returns and calls (requires --stats File)\n";
+    echo "  --help - shows this help\n";
+    echo "  --stats File - stats will be written into 'file'\n";
+    echo "  --loc - number of lines with valid instructions (requires --stats File)\n";
+    echo "  --comments - number of comments (requires --stats File)\n";
+    echo "  --labels - number of labels (requires --stats File)\n";
+    echo "  --jumps -  number of (un)conditioned jumps, returns and calls (requires --stats File)\n";
     exit(0);
 }
 if(in_array("--stats", $argv) && !array_key_exists("stats", $arguments)){

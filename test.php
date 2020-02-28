@@ -1,19 +1,30 @@
 <?php
+/*
+ * IPP Project 2
+ * Author: David Oravec (xorave05)
+ * File: script test.php
+ * About: Simple script which automatically tests functionality of
+ *        parse.php and interpret.py and generates simple HTML output
+ *        with number of tests and results.
+ *
+ */
+
 $dir = "./";
 $parsePath = "parse.php";
+#$intPath = "interpret.py";
 $jexam = "/pub/courses/ipp/jexamxml/jexamxml.jar";
 $recurse = false; $parse = false;
 $testPassed = 0; $testFailures = 0; $jumped = 0;
-$longopts = array("help", "directory:", "recursive", "parse-script:", "parse-only", "jexamxml:");
-$arguments = getopt("",$longopts);
 
-function argHandler($arguments){
+function argHandler($arguments, $argc){
     global $dir, $recurse, $parse, $parsePath;
+
     if ($arguments === false){
         exit(10);
     }
     if (array_key_exists("help",$arguments)){
         if($argc != 2){
+            fwrite(STDERR,"\nWrong usage of parameter --help!\n\n");
             exit(10);
         }
         echo "Simple script for testing parse.php\nUsage:\n";
@@ -195,8 +206,9 @@ function isXmlStructureValid($file) {
 /****************************************************************/
 /****************************Main section************************/
 /****************************************************************/
-
-argHandler($arguments);
+$longopts = array("help", "directory:", "recursive", "parse-script:", "parse-only", "jexamxml:");
+$arguments = getopt("",$longopts);
+argHandler($arguments, $argc);
 $testFiles = directoryCheck($dir,$recurse);
 $sources = sortTestsToArray($testFiles);
 printHTMLHead();
@@ -212,7 +224,13 @@ for ($i=0; $i < count($sources); $i++) {
     }
     exec("php7.4 $parsePath < ".$sources[$i]["src"],$output["out"],$output["rc"]);
     $output["out"] = implode("\n",$output["out"]);
-    if ($output["rc"] == $sources["rc"]){
+    if ($output["rc"] == $sources[$i]["rc"]){
+        if ($output["rc"] != 0){
+            $success = "PASSED";
+            $testPassed++;
+            printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
+            continue;
+        }
         $file = fopen("tempFile.out","w");
         if (!$file)
             exit(12);
@@ -230,9 +248,15 @@ for ($i=0; $i < count($sources); $i++) {
             printTest($sources[$i]["src"],$JXrc, $sources[$i]["rc"], $success);
         }
     } else {
+        /*if ($output["rc"] == $sources["rc"]){
+            $success = "PASSED";
+            $testPassed++;
+            printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
+        } else {*/
         $testFailures++;
         $success = "FAILED";
         printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
+        //}
     }
 }
 printHTMLEnd($testPassed,$testFailures, (count($sources)-$jumped));
