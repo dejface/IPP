@@ -1,23 +1,29 @@
 <?php
 /*
- * IPP Project 2
+ * IPP Project 2 (bonus in Project 1)
  * Author: David Oravec (xorave05)
- * File: script test.php
+ * File: test.php
  * About: Simple script which automatically tests functionality of
  *        parse.php and interpret.py and generates simple HTML output
  *        with number of tests and results.
+ * 
+ * NOTE: This script wasn't fully tested with BOTH and INT-ONLY option. 
+ *       I've tried to implement complete workflow of test script, but I'm not really
+ *       sure if the BOTH and INTERPRET part is functional.
+ *       PARSE part is completely tested and it shoul be okay.
+ *       Some inconsistencies could appear.
  *
  */
 
 $dir = "./";
 $parsePath = "parse.php";
-#$intPath = "interpret.py";
+$intPath = "interpret.py";
 $jexam = "/pub/courses/ipp/jexamxml/jexamxml.jar";
-$recurse = false; $parse = false;
+$recurse = false; $parse = false; $interpret = false;
 $testPassed = 0; $testFailures = 0; $jumped = 0;
 
 function argHandler($arguments, $argc){
-    global $dir, $recurse, $parse, $parsePath;
+    global $dir, $recurse, $parse, $parsePath, $interpret, $intPath;
 
     if ($arguments === false){
         exit(10);
@@ -53,6 +59,9 @@ function argHandler($arguments, $argc){
         $parsePath = $arguments["parse-script"];
     }
     if (array_key_exists("parse-only",$arguments)){
+        if (array_key_exists("int-only",$arguments) || array_key_exists("int-script",$arguments)){
+            exit(10);
+        }
         $parse = true;
     }
     if (array_key_exists("jexamxml",$arguments)){
@@ -60,6 +69,18 @@ function argHandler($arguments, $argc){
             exit (10);
         }
         $jexam = $arguments["jexamxml"];
+    }
+    if (array_key_exists("int-only", $arguments)){
+        if (array_key_exists("parse-only",$arguments) || array_key_exists("parse-script",$arguments)){
+            exit(10);
+        }
+        $interpret = true;
+    }
+    if (array_key_exists("int-script",$arguments)){
+        if ($arguments["int-script"] === false){
+            exit (10);
+        }
+        $intPath = $arguments["int-script"];
     }
 }
 
@@ -123,6 +144,14 @@ function sortTestsToArray($testFiles){
             $arrTest["out"] = $temp;
         } else {
             $arrTest["out"] = '';
+        }
+        unset($temp);
+
+        $temp = substr($source,0,-4).".in";
+        if (in_array($temp,$testFiles)){
+            $arrTest["in"] = $temp;
+        } else {
+            $arrTest["in"] = '';
         }
         array_push($tests, $arrTest);
     }
@@ -206,7 +235,7 @@ function isXmlStructureValid($file) {
 /****************************************************************/
 /****************************Main section************************/
 /****************************************************************/
-$longopts = array("help", "directory:", "recursive", "parse-script:", "parse-only", "jexamxml:");
+$longopts = array("help", "directory:", "recursive", "parse-script:", "parse-only", "jexamxml:", "int-script:", "int-only");
 $arguments = getopt("",$longopts);
 argHandler($arguments, $argc);
 $testFiles = directoryCheck($dir,$recurse);
@@ -216,47 +245,85 @@ printHTMLHead();
 for ($i=0; $i < count($sources); $i++) {
     $output = array();
 
-    if ($parse){
+    if ($parse && !$interpret){
         if (isXmlStructureValid($sources[$i]["src"]) == true) {
             $jumped++;
             continue;
         }
-    }
-    exec("php7.4 $parsePath < ".$sources[$i]["src"],$output["out"],$output["rc"]);
-    $output["out"] = implode("\n",$output["out"]);
-    if ($output["rc"] == $sources[$i]["rc"]){
-        if ($output["rc"] != 0){
-            $success = "PASSED";
-            $testPassed++;
-            printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
-            continue;
-        }
-        $file = fopen("tempFile.out","w");
-        if (!$file)
-            exit(12);
-        fwrite($file,$output["out"]);
-        fclose($file);
-        exec("java -jar $jexam ". $sources[$i]["out"]. " tempFile.out diffs.xml  /D /pub/courses/ipp/jexamxml/options",$JXout,$JXrc);
-        unlink("tempFile.out");
-        if ($JXrc == 0){
-            $success = "PASSED";
-            $testPassed++;
-            printTest($sources[$i]["src"],$JXrc, $sources[$i]["rc"], $success);
+        exec("php7.4 $parsePath < ".$sources[$i]["src"],$output["out"],$output["rc"]);
+        $output["out"] = implode("\n",$output["out"]);
+        if ($output["rc"] == $sources[$i]["rc"]){
+            if ($output["rc"] != 0){
+                $success = "PASSED";
+                $testPassed++;
+                printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
+                continue;
+            }
+            $file = fopen("tempFile.out","w");
+            if (!$file)
+                exit(12);
+            fwrite($file,$output["out"]);
+            fclose($file);
+            exec("java -jar $jexam ". $sources[$i]["out"]. " tempFile.out diffs.xml  /D /pub/courses/ipp/jexamxml/options",$JXout,$JXrc);
+            unlink("tempFile.out");
+            if ($JXrc == 0){
+                $success = "PASSED";
+                $testPassed++;
+                printTest($sources[$i]["src"],$JXrc, $sources[$i]["rc"], $success);
+            } else {
+                $testFailures++;
+                $success = "FAILED";
+                printTest($sources[$i]["src"],$JXrc, $sources[$i]["rc"], $success);
+            }
         } else {
+            /*if ($output["rc"] == $sources["rc"]){
+                $success = "PASSED";
+                $testPassed++;
+                printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
+            } else {*/
             $testFailures++;
             $success = "FAILED";
-            printTest($sources[$i]["src"],$JXrc, $sources[$i]["rc"], $success);
-        }
-    } else {
-        /*if ($output["rc"] == $sources["rc"]){
-            $success = "PASSED";
-            $testPassed++;
             printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
-        } else {*/
-        $testFailures++;
-        $success = "FAILED";
-        printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
-        //}
+            //}
+        }
+    } else if (!$parse && !$interpret){
+        exec("php7.4 $parsePath < ".$sources[$i]["src"],$output["out"],$output["rc"]);
+        $output["out"] = implode("\n",$output["out"]);
+        if ($output["rc"] == 0){
+            $input = "";
+            if ($sources[$i]["in"] == ''){
+                $input = $sources[$i]["src"];
+            } else {
+                $input = $sources[$i]["in"];
+            }
+            exec("php7.4 $parsePath < ".$sources[$i]["src"]." | python3.6 $intPath --input=".$input,$output["out"],$output["rc"]);
+            $output["out"] = implode("\n",$output["out"]);
+            if ($output["rc"] == $sources[$i]["rc"]){
+                if ($output["rc"] != 0){
+                    $success = "PASSED";
+                    $testPassed++;
+                    printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
+                    continue;
+                }
+                if($sources[$i]["out"] === ""){
+			        if($output["out"] != "")
+			        	$output["diff"] = $output["out"];
+			        else
+				        $output["diff"] = NULL;
+		        } else {
+			        exec("echo -n ".$output["out"]." | diff ".$sources[$i]["out"]." -", $output["diff"], $rc);
+			        if ($rc){
+                        $testFailures++;
+                        $success = "FAILED";
+                        printTest($sources[$i]["src"],$rc, $sources[$i]["rc"], $success);
+                    } else {
+                        $success = "PASSED";
+                        $testPassed++;
+                        printTest($sources[$i]["src"],$rc, $sources[$i]["rc"], $success);
+                    }
+		        }
+            }
+        }
     }
 }
 printHTMLEnd($testPassed,$testFailures, (count($sources)-$jumped));
