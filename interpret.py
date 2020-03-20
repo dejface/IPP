@@ -93,7 +93,13 @@ def mySwitch(argument):
               "ADD": add,
               "SUB": sub,
               "MUL": mul,
-              "IDIV": idiv}
+              "IDIV": idiv,
+              "LT": lt,
+              "GT": gt,
+              "EQ": eq,
+              "AND": andInstr,
+              "OR": orInstr,
+              "NOT": notInstr}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -164,6 +170,9 @@ def call(argument):
     #hashTable["label"][var]
     #TODO
 
+# GLOBAL TODO treba osetrit: -ci je premenna definovana v tabulke symbolov, kontrola
+#                            -pokial je argument v premennej, tak ziskat jeho content
+
 def add(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
@@ -230,6 +239,161 @@ def idiv(argument):
     result = int(argument[1][1][1]) // int(argument[1][2][1])
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
+
+def lt(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    if (checkSymb(argument[1][1][0]) or checkSymb(argument[1][2][0])) is False:
+        sys.exit(53)
+
+    if argument[1][1][0] == 'nil' or argument[1][2][0] == 'nil':
+        sys.exit(53)
+
+    if argument[1][1][0] != argument[1][2][0]:
+        sys.exit(53)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+
+    if argument[1][1][0] == 'int':
+        result = int(argument[1][1][1]) < int(argument[1][2][1])
+        hashTable[destPrefix][destSuffix] = ('bool', str(result))
+    elif argument[1][1][0] == 'string':
+        result = argument[1][1][1] < argument[1][2][1]
+        hashTable[destPrefix][destSuffix] = ('bool', result)
+    elif argument[1][1][0] == 'bool':
+        if argument[1][1][1] == 'false' and argument[1][2][1] == 'true':
+            hashTable[destPrefix][destSuffix] = ('bool', 'True')
+        else:
+            hashTable[destPrefix][destSuffix] = ('bool', 'False')
+    else:
+        sys.exit(53)
+
+def gt(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    if (checkSymb(argument[1][1][0]) or checkSymb(argument[1][2][0])) is False:
+        sys.exit(53)
+
+    if argument[1][1][0] == 'nil' or argument[1][2][0] == 'nil':
+        sys.exit(53)
+
+    if argument[1][1][0] != argument[1][2][0]:
+        sys.exit(53)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+
+    if argument[1][1][0] == 'int':
+        result = int(argument[1][1][1]) > int(argument[1][2][1])
+        hashTable[destPrefix][destSuffix] = ('bool', str(result))
+    elif argument[1][1][0] == 'string':
+        result = argument[1][1][1] > argument[1][2][1]
+        hashTable[destPrefix][destSuffix] = ('bool', result)
+    elif argument[1][1][0] == 'bool':
+        if argument[1][1][1] == 'true' and argument[1][2][1] == 'false':
+            hashTable[destPrefix][destSuffix] = ('bool', 'True')
+        else:
+            hashTable[destPrefix][destSuffix] = ('bool', 'False')
+    else:
+        sys.exit(53)
+
+
+def eq(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    if (checkSymb(argument[1][1][0]) or checkSymb(argument[1][2][0])) is False:
+        sys.exit(53)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+
+    if argument[1][1][0] == 'nil' or argument[1][2][0] == 'nil':
+        if argument[1][1][1] == 'nil' and argument[1][2][1] == 'nil':
+            hashTable[destPrefix][destSuffix] = ('bool', 'True')
+        else:
+            hashTable[destPrefix][destSuffix] = ('bool', 'False')
+        return
+
+    if argument[1][1][0] != argument[1][2][0]:
+        sys.exit(53)
+
+    if argument[1][1][0] == 'int':
+        result = int(argument[1][1][1]) < int(argument[1][2][1])
+        hashTable[destPrefix][destSuffix] = ('bool', str(result))
+    elif argument[1][1][0] == 'string':
+        result = argument[1][1][1] < argument[1][2][1]
+        hashTable[destPrefix][destSuffix] = ('bool', result)
+    elif argument[1][1][0] == 'bool':
+        if argument[1][1][1] == 'false' and argument[1][2][1] == 'true':
+            hashTable[destPrefix][destSuffix] = ('bool', 'True')
+        else:
+            hashTable[destPrefix][destSuffix] = ('bool', 'False')
+    else:
+        sys.exit(53)
+
+def andInstr(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+
+    if argument[1][1][0] != 'bool' or argument[1][2][0] != 'bool':
+        sys.exit(53)
+
+    if argument[1][1][1] == 'true' and argument[1][2][1] == 'true':
+        hashTable[destPrefix][destSuffix] = ('bool', 'True')
+    else:
+        hashTable[destPrefix][destSuffix] = ('bool', 'False')
+
+
+def orInstr(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+
+    if argument[1][1][0] != 'bool' or argument[1][2][0] != 'bool':
+        sys.exit(53)
+
+    if argument[1][1][1] == 'true' or argument[1][2][1] != 'true':
+        hashTable[destPrefix][destSuffix] = ('bool', 'True')
+    else:
+        hashTable[destPrefix][destSuffix] = ('bool', 'False')
+
+
+def notInstr(argument):
+    if (len(argument[1])) != 2:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+
+    if argument[1][1][0] != 'bool':
+        sys.exit(53)
+
+    if argument[1][1][1] == 'true':
+        hashTable[destPrefix][destSuffix] = ('bool', 'False')
+    else:
+        hashTable[destPrefix][destSuffix] = ('bool', 'True')
+
 
 def main():
     global hashTable
