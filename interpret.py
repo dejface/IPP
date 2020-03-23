@@ -99,7 +99,10 @@ def mySwitch(argument):
               "EQ": eq,
               "AND": andInstr,
               "OR": orInstr,
-              "NOT": notInstr}
+              "NOT": notInstr,
+              "INT2CHAR": int2char,
+              "STRI2INT": stri2int,
+              "READ": read}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -394,6 +397,94 @@ def notInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'True')
 
+def int2char(argument):
+    if (len(argument[1])) != 2:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    if argument[1][1][0] != 'int':
+        sys.exit(53)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+
+    try:
+        hashTable[destPrefix][destSuffix] = ('string', chr(int(argument[1][1][1])))
+    except:
+        sys.exit(58)
+
+def stri2int(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    if argument[1][1][0] != 'string':
+        sys.exit(53)
+
+    if argument[1][2][0] != 'int':
+        sys.exit(53)
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    word = argument[1][1][1]
+    index = argument[1][2][1]
+    if int(index) < 0:
+        sys.exit(58)
+
+    try:
+        result = word[int(index)]
+        hashTable[destPrefix][destSuffix] = ('int', ord(result))
+    except:
+        sys.exit(58)
+    print(hashTable)
+
+def read(argument):
+    if (len(argument[1])) != 2:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    if argument[1][1][0] != 'type':
+        sys.exit(53)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    type = argument[1][1][1]
+
+    try:
+        result = input()
+    except:
+        result = ""
+
+    if type == 'int' or type == 'string' or type == 'bool':
+        if type == 'int':
+            if result == "":
+                hashTable[destPrefix][destSuffix] = ('nil', 'nil')
+            else:
+                try:
+                    hashTable[destPrefix][destSuffix] = ('int', str(int(result)))
+                except:
+                    hashTable[destPrefix][destSuffix] = ('nil', 'nil')
+        elif type == 'string':
+            if result == "":
+                hashTable[destPrefix][destSuffix] = ('nil', 'nil')
+            else:
+                try:
+                    hashTable[destPrefix][destSuffix] = ('string', str(result))
+                except:
+                    hashTable[destPrefix][destSuffix] = ('nil', 'nil')
+        elif type == 'bool':
+            if result == "":
+                hashTable[destPrefix][destSuffix] = ('bool', 'false')
+            else:
+                if str(result).lower() != 'true':
+                    hashTable[destPrefix][destSuffix] = ('bool', 'false')
+                else:
+                    hashTable[destPrefix][destSuffix] = ('bool', 'true')
+    else:
+        sys.exit(57)
+    print(hashTable)
 
 def main():
     global hashTable
