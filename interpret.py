@@ -83,6 +83,40 @@ def editVar(var):
 
     return prefix, suffix
 
+def checkErr(var, expected1, expected2, *symb):
+    if var != 'var':
+        return 32
+
+    if expected2 is None:
+        if symb[0] != expected1:
+            return 53
+    else:
+        if symb[0] != expected1:
+            return 53
+
+        if symb[1] != expected2:
+            return 53
+    return 0
+
+def inTable(pref, suf):
+
+    if pref not in hashTable:
+        return 55
+    if suf not in hashTable[pref]:
+        return 54
+    return 0
+
+def fromTable(arg):
+    pref, suf = editVar(arg)
+    code = inTable(pref, suf)
+    if code != 0:
+        sys.exit(code)
+
+    result = hashTable[pref][suf]
+    if result is None:
+        sys.exit(56)
+    return result
+
 def mySwitch(argument):
     switcher = {"MOVE": move,
               "CREATEFRAME": createframe,
@@ -102,7 +136,12 @@ def mySwitch(argument):
               "NOT": notInstr,
               "INT2CHAR": int2char,
               "STRI2INT": stri2int,
-              "READ": read}
+              "READ": read,
+              "WRITE": write,
+              "CONCAT": concat,
+              "STRLEN": strlen,
+              "GETCHAR": getchar,
+              "SETCHAR": setchar}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -110,15 +149,28 @@ def mySwitch(argument):
 def move(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
-    if checkSymb(argument[1][1][0]) is False:
+
+    if (argument[1][0][0]) != 'var':
         sys.exit(32)
-    # TODO overit definovanost v hashtable
+
+    if argument[1][1][0] != 'var':
+        if checkSymb(argument[1][1][0]) is False:
+            sys.exit(32)
+        else:
+            if argument[1][1][1] is None:
+                argument[1][1][1] = ""
+                var = (argument[1][1][0], argument[1][1][1])
+            else:
+                var = (argument[1][1][0], argument[1][1][1])
+    else:
+        var = fromTable(argument[1][1][1])
+
     destPrefix, destSuffix = editVar(argument[1][0][1])
-    srcPrefix, srcSuffix = argument[1][1]
-    var = (srcPrefix, srcSuffix)
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     hashTable[destPrefix][destSuffix] = var
-    print(hashTable)
 
 # creates a temporary frame TF
 
@@ -159,9 +211,10 @@ def defvar(argument):
 
     if (argument[1][0][0]) != 'var':
         sys.exit(32)
-    prefix, suffix = editVar(argument[1][0][1])
-    #TODO errory
-    hashTable[prefix][suffix] = None
+    pref, suf = editVar(argument[1][0][1])
+    if pref not in hashTable:
+        sys.exit(55)
+    hashTable[pref][suf] = None
 
 
 def call(argument):
@@ -176,66 +229,106 @@ def call(argument):
 # GLOBAL TODO treba osetrit: -ci je premenna definovana v tabulke symbolov, kontrola
 #                            -pokial je argument v premennej, tak ziskat jeho content
 
+# ADD ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def add(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
 
-    if (argument[1][0][0]) != 'var':
-        sys.exit(32)
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
 
-    if (argument[1][1][0] != 'int') and (argument[1][2][0] != 'int'):
-        sys.exit(53)
+    exp = 'int'
+    code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     result = int(argument[1][1][1]) + int(argument[1][2][1])
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
 
+# SUB ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def sub(argument):
     # TODO aj v add overit definovanost v tabulke a ak by nebol type int ale var
     if (len(argument[1])) != 3:
         sys.exit(32)
 
-    if (argument[1][0][0]) != 'var':
-        sys.exit(32)
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
 
-    if (argument[1][1][0] != 'int') and (argument[1][2][0] != 'int'):
-        sys.exit(53)
+    exp = 'int'
+    code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     result = int(argument[1][1][1]) - int(argument[1][2][1])
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
 
+# MUL ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def mul(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
 
-    if (argument[1][0][0]) != 'var':
-        sys.exit(32)
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
 
-    if (argument[1][1][0] != 'int') and (argument[1][2][0] != 'int'):
-        sys.exit(53)
+    exp = 'int'
+    code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     result = int(argument[1][1][1]) * int(argument[1][2][1])
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
 
+# IDIV ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def idiv(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
 
-    if (argument[1][0][0]) != 'var':
-        sys.exit(32)
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
 
-    if (argument[1][1][0] != 'int') and (argument[1][2][0] != 'int'):
-        sys.exit(53)
+    exp = 'int'
+    code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     if int(argument[1][2][1]) == 0:
         sys.exit(57)
@@ -243,12 +336,20 @@ def idiv(argument):
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
 
+# LT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def lt(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
 
     if argument[1][0][0] != 'var':
         sys.exit(32)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
 
     if (checkSymb(argument[1][1][0]) or checkSymb(argument[1][2][0])) is False:
         sys.exit(53)
@@ -260,6 +361,9 @@ def lt(argument):
         sys.exit(53)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     if argument[1][1][0] == 'int':
         result = int(argument[1][1][1]) < int(argument[1][2][1])
@@ -275,12 +379,20 @@ def lt(argument):
     else:
         sys.exit(53)
 
+# GT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def gt(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
 
     if argument[1][0][0] != 'var':
         sys.exit(32)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
 
     if (checkSymb(argument[1][1][0]) or checkSymb(argument[1][2][0])) is False:
         sys.exit(53)
@@ -292,6 +404,9 @@ def gt(argument):
         sys.exit(53)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     if argument[1][1][0] == 'int':
         result = int(argument[1][1][1]) > int(argument[1][2][1])
@@ -307,7 +422,7 @@ def gt(argument):
     else:
         sys.exit(53)
 
-
+# EQ ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def eq(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
@@ -315,10 +430,20 @@ def eq(argument):
     if argument[1][0][0] != 'var':
         sys.exit(32)
 
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
+
     if (checkSymb(argument[1][1][0]) or checkSymb(argument[1][2][0])) is False:
         sys.exit(53)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     if argument[1][1][0] == 'nil' or argument[1][2][0] == 'nil':
         if argument[1][1][1] == 'nil' and argument[1][2][1] == 'nil':
@@ -344,6 +469,7 @@ def eq(argument):
     else:
         sys.exit(53)
 
+# AND ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def andInstr(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
@@ -351,7 +477,17 @@ def andInstr(argument):
     if argument[1][0][0] != 'var':
         sys.exit(32)
 
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
+
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     if argument[1][1][0] != 'bool' or argument[1][2][0] != 'bool':
         sys.exit(53)
@@ -361,7 +497,7 @@ def andInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'False')
 
-
+# OR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def orInstr(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
@@ -369,7 +505,17 @@ def orInstr(argument):
     if argument[1][0][0] != 'var':
         sys.exit(32)
 
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
+
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     if argument[1][1][0] != 'bool' or argument[1][2][0] != 'bool':
         sys.exit(53)
@@ -379,7 +525,7 @@ def orInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'False')
 
-
+# NOT ⟨var⟩ ⟨symb1⟩
 def notInstr(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
@@ -387,7 +533,14 @@ def notInstr(argument):
     if argument[1][0][0] != 'var':
         sys.exit(32)
 
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     if argument[1][1][0] != 'bool':
         sys.exit(53)
@@ -397,36 +550,54 @@ def notInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'True')
 
+# INT2CHAR ⟨var⟩ ⟨symb1⟩
 def int2char(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
 
-    if argument[1][0][0] != 'var':
-        sys.exit(32)
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
 
-    if argument[1][1][0] != 'int':
-        sys.exit(53)
+    exp = 'int'
+    exp2 = None
+    code = checkErr(argument[1][0][0], exp, exp2, argument[1][1][0])
+    if code != 0:
+        sys.exit(code)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
 
     try:
         hashTable[destPrefix][destSuffix] = ('string', chr(int(argument[1][1][1])))
     except:
         sys.exit(58)
 
+# STRI2INT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def stri2int(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
 
-    if argument[1][0][0] != 'var':
-        sys.exit(32)
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
 
-    if argument[1][1][0] != 'string':
-        sys.exit(53)
+    exp = 'string'
+    exp2 = 'int'
+    code = checkErr(argument[1][0][0], exp, exp2, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
 
-    if argument[1][2][0] != 'int':
-        sys.exit(53)
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
     word = argument[1][1][1]
     index = argument[1][2][1]
     if int(index) < 0:
@@ -437,19 +608,22 @@ def stri2int(argument):
         hashTable[destPrefix][destSuffix] = ('int', ord(result))
     except:
         sys.exit(58)
-    print(hashTable)
 
 def read(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
 
-    if argument[1][0][0] != 'var':
-        sys.exit(32)
-
-    if argument[1][1][0] != 'type':
-        sys.exit(53)
+    exp = 'type'
+    exp2 = None
+    code = checkErr(argument[1][0][0], exp, exp2, argument[1][1][0])
+    if code != 0:
+        sys.exit(code)
 
     destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
     type = argument[1][1][1]
 
     try:
@@ -484,7 +658,100 @@ def read(argument):
                     hashTable[destPrefix][destSuffix] = ('bool', 'true')
     else:
         sys.exit(57)
-    print(hashTable)
+
+def write(argument):
+    if (len(argument[1])) != 1:
+        sys.exit(32)
+
+    if checkSymb(argument[1][0][0]) is False:
+        sys.exit(53)
+
+    if argument[1][0][0] == 'nil':
+        print("", end='')
+    else:
+        print(argument[1][0][1], end='')
+
+
+# CONCAT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
+def concat(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
+
+    exp = 'string'
+    code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
+    hashTable[destPrefix][destSuffix] = ('string', str(argument[1][1][1] + argument[1][2][1]))
+
+# STRLEN ⟨var⟩ ⟨symb1⟩
+def strlen(argument):
+    if (len(argument[1])) != 2:
+        sys.exit(32)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+
+    exp = 'string'
+    exp2 = None
+    code = checkErr(argument[1][0][0], exp, exp2, argument[1][1][0])
+    if code != 0:
+        sys.exit(code)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
+    hashTable[destPrefix][destSuffix] = ('int', int(len(argument[1][1][1])))
+
+# GETCHAR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
+def getchar(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
+
+    exp = 'string'
+    exp2 = 'int'
+    code = checkErr(argument[1][0][0], exp, exp2, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
+    word = argument[1][1][1]
+    index = argument[1][2][1]
+    if int(index) < 0 or int(index) > len(word)-1:
+        sys.exit(58)
+
+    hashTable[destPrefix][destSuffix] = ('string', str(word[int(index)]))
+
+
+def setchar(argument):
+    pass
+
 
 def main():
     global hashTable
@@ -496,6 +763,7 @@ def main():
     while order < len(instr):
         mySwitch(instr[order])
         order += 1
+    print(hashTable)
 
 
 if __name__ == "__main__":
