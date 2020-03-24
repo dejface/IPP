@@ -61,6 +61,8 @@ def readSource(sourceFile):
             xmlArg = instruction.find("arg"+str(i+1))
             if xmlArg.attrib["type"] not in types:
                 exit(53)
+            if xmlArg.attrib["type"] == 'string' and xmlArg.text is not None:
+                xmlArg.text = changeString(xmlArg.text)
             arg = (xmlArg.attrib["type"], xmlArg.text)
             args.append(arg)
             #TODO osetrit lepsie XML napr.type apod.
@@ -85,6 +87,14 @@ def editVar(var):
         suffix = var[3:]
 
     return prefix, suffix
+
+def changeString(str):
+    for index, change in enumerate(str.split("\\")):
+        if index == 0:
+            str = change
+        else:
+            str = str + chr(int(change[0:3])) + change[3:]
+    return str
 
 def checkErr(var, expected1, expected2, *symb):
     if var != 'var':
@@ -892,11 +902,59 @@ def jump(argument):
     instrPointer = hashTable["label"][argument[1][0][1]]
 
 def jumpifeq(argument):
-    pass
+    global instrPointer
+    if len(argument[1]) != 3:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'label':
+        sys.exit(53)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][0][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][0][1])
+        argument[1][2] = var
+
+    if str(argument[1][1][0]) == str(argument[1][2][0]):
+        if str(argument[1][1][1]) == str(argument[1][2][1]):
+            instrPointer = hashTable["label"][argument[1][0][1]]
+    elif str(argument[1][1][0]) == 'nil' or str(argument[1][2][0]) == 'nil':
+        if str(argument[1][1][0]) == 'string' or str(argument[1][2][0]) == 'string':
+            if str(argument[1][1][1]) == "" or str(argument[1][2][1]) == "":
+                instrPointer = hashTable["label"][argument[1][0][1]]
+    else:
+        sys.exit(53)
 
 
 def jumpifneq(argument):
-    pass
+    global instrPointer
+    if len(argument[1]) != 3:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'label':
+        sys.exit(53)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][0][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][0][1])
+        argument[1][2] = var
+
+    if str(argument[1][1][0]) == str(argument[1][2][0]):
+        if str(argument[1][1][1]) != str(argument[1][2][1]):
+            instrPointer = hashTable["label"][argument[1][0][1]]
+    elif str(argument[1][1][0]) == 'nil' or str(argument[1][2][0]) == 'nil':
+        if str(argument[1][1][0]) == 'string' or str(argument[1][2][0]) == 'string':
+            if str(argument[1][1][1]) == "" or str(argument[1][2][1]) == "":
+                pass
+            else:
+                instrPointer = hashTable["label"][argument[1][0][1]]
+        else:
+            instrPointer = hashTable["label"][argument[1][0][1]]
+    else:
+        sys.exit(53)
 
 
 def dprint(argument):
@@ -942,6 +1000,7 @@ def pops(argument):
         hashTable[destPref][destSuf] = stackOfInstrs.pop()
     else:
         sys.exit(56)
+
 
 def main():
     global hashTable
