@@ -141,7 +141,10 @@ def mySwitch(argument):
               "CONCAT": concat,
               "STRLEN": strlen,
               "GETCHAR": getchar,
-              "SETCHAR": setchar}
+              "SETCHAR": setchar,
+              "TYPE": typeInstr,
+              "EXIT": exitInstr,
+              "DPRINT": dprint}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -226,8 +229,6 @@ def call(argument):
     #hashTable["label"][var]
     #TODO
 
-# GLOBAL TODO treba osetrit: -ci je premenna definovana v tabulke symbolov, kontrola
-#                            -pokial je argument v premennej, tak ziskat jeho content
 
 # ADD ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def add(argument):
@@ -750,8 +751,98 @@ def getchar(argument):
 
 
 def setchar(argument):
-    pass
+    if (len(argument[1])) != 3:
+        sys.exit(32)
 
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
+
+    exp = 'int'
+    exp2 = 'string'
+    code = checkErr(argument[1][0][0], exp, exp2, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
+    word = fromTable(argument[1][0][1])
+    if word[0] != 'string':
+        sys.exit(53)
+    index = int(argument[1][1][1])
+    char = argument[1][2][1][0]
+    if char == "":
+        sys.exit(58)
+    if int(index) < 0 or int(index) > len(word[1])-1:
+        sys.exit(58)
+
+    result = word[1]
+    result = result[:index] + char + result[index+1:]
+
+    hashTable[destPrefix][destSuffix] = ('string', str(result))
+
+def typeInstr(argument):
+    if (len(argument[1])) != 2:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(32)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
+    if argument[1][1][0] == 'var':
+        pref, suf = editVar(argument[1][1][1])
+        code = inTable(pref, suf)
+        if code != 0:
+            sys.exit(code)
+        result = hashTable[pref][suf]
+        if result is None:
+            result = ""
+        else:
+            result = result[0]
+    else:
+        if checkSymb(argument[1][1][0]) is False:
+            sys.exit(53)
+        else:
+            result = argument[1][1][0]
+
+    hashTable[destPrefix][destSuffix] = ('string', str(result))
+
+def exitInstr(argument):
+    if (len(argument[1])) != 1:
+        sys.exit(32)
+
+    if argument[1][0][0] == 'var':
+        var = fromTable(argument[1][0][1])
+        argument[1][0] = var
+
+    if argument[1][0][0] != 'int':
+        sys.exit(53)
+
+    if 0 <= int(argument[1][0][1]) <= 49:
+        sys.exit(int(argument[1][0][1]))
+    else:
+        sys.exit(57)
+
+def dprint(argument):
+    if (len(argument[1])) != 1:
+        sys.exit(32)
+
+    if argument[1][0][0] == 'var':
+        var = fromTable(argument[1][0][1])
+        argument[1][0] = var
+
+    sys.stderr.write(str(argument[1][0][1]))
+    pass
 
 def main():
     global hashTable
