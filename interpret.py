@@ -4,6 +4,9 @@ import sys
 
 hashTable = {}
 stackOfFrames = list()
+stackOfInstrs = list()
+stackOfCalls = list()
+instrPointer = 0
 
 def arg_handler():
     argsparser = argparse.ArgumentParser(description="Loads XML code, transforms it to IPPcode20 and executes it")
@@ -121,9 +124,12 @@ def mySwitch(argument):
     switcher = {"MOVE": move,
               "CREATEFRAME": createframe,
               "PUSHFRAME": pushframe,
-              "POPFRANE": popframe,
+              "POPFRAME": popframe,
               "DEFVAR": defvar,
               "CALL": call,
+              "RETURN": returnInstr,
+              "PUSHS": pushs,
+              "POPS": pops,
               "ADD": add,
               "SUB": sub,
               "MUL": mul,
@@ -144,7 +150,11 @@ def mySwitch(argument):
               "SETCHAR": setchar,
               "TYPE": typeInstr,
               "EXIT": exitInstr,
-              "DPRINT": dprint}
+              "LABEL": label,
+              "DPRINT": dprint,
+              "JUMP": jump,
+              "JUMPIFEQ": jumpifeq,
+              "JUMPIFNEQ": jumpifneq}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -221,13 +231,29 @@ def defvar(argument):
 
 
 def call(argument):
+    global instrPointer
     if (len(argument[1])) != 1:
         sys.exit(32)
-    pass
-    #var = argument[1]
 
-    #hashTable["label"][var]
-    #TODO
+    if argument[1][0][0] != 'label':
+        sys.exit(32)
+
+    if argument[1][0][1] not in hashTable["label"]:
+        sys.exit(52)
+
+    stackOfCalls.append(instrPointer+1)
+    instrPointer = hashTable["label"][argument[1][0][1]]
+
+
+def returnInstr(argument):
+    global instrPointer
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    if len(stackOfCalls) != 0:
+        instrPointer = stackOfCalls.pop()
+    else:
+        sys.exit(56)
 
 
 # ADD ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -664,6 +690,10 @@ def write(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
 
+    if argument[1][0][0] == 'var':
+        var = fromTable(argument[1][0][1])
+        argument[1][0] = var
+
     if checkSymb(argument[1][0][0]) is False:
         sys.exit(53)
 
@@ -833,6 +863,42 @@ def exitInstr(argument):
     else:
         sys.exit(57)
 
+def createLabel(argument):
+    global instrPointer
+    if (len(argument[1][1])) != 1:
+        sys.exit(32)
+
+    if argument[1][1][0][0] != 'label':
+        sys.exit(32)
+
+    if argument[1][1][0][1] in hashTable["label"]:
+        sys.exit(52)
+    hashTable["label"][argument[1][1][0][1]] = argument[0]-1
+
+def label(argument):
+    pass
+
+def jump(argument):
+    global instrPointer
+    if len(argument[1]) != 1:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'label':
+        sys.exit(53)
+
+    if argument[1][0][1] not in hashTable["label"]:
+        sys.exit(52)
+
+    instrPointer = hashTable["label"][argument[1][0][1]]
+
+def jumpifeq(argument):
+    pass
+
+
+def jumpifneq(argument):
+    pass
+
+
 def dprint(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -842,19 +908,61 @@ def dprint(argument):
         argument[1][0] = var
 
     sys.stderr.write(str(argument[1][0][1]))
-    pass
+
+def pushs(argument):
+    if (len(argument[1])) != 1:
+        sys.exit(32)
+
+    if argument[1][0][0] == 'var':
+        pref, suf = editVar(argument[1][0][1])
+        code = inTable(pref,suf)
+        if code != 0:
+            sys.exit(code)
+        var = fromTable(argument[1][0][1])
+        argument[1][0] = var
+
+    if checkSymb(argument[1][0][0]) is False:
+        sys.exit(53)
+
+    stackOfInstrs.append((argument[1][0][0], argument[1][0][1]))
+
+def pops(argument):
+    if (len(argument[1])) != 1:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'var':
+        sys.exit(53)
+
+    destPref, destSuf = editVar(argument[1][0][1])
+    code = inTable(destPref, destSuf)
+    if code != 0:
+        sys.exit(code)
+
+    if stackOfInstrs != 0:
+        hashTable[destPref][destSuf] = stackOfInstrs.pop()
+    else:
+        sys.exit(56)
 
 def main():
     global hashTable
+    global instrPointer
     sourceFile, inputFile = arg_handler()
     instr = readSource(sourceFile)
     hashTable["GF"] = {}
-    order = 0
+    hashTable["label"] = {}
+    for i in range(0, len(instr)):
+        if instr[i][1][0] == 'LABEL':
+            createLabel(instr[i])
 
-    while order < len(instr):
-        mySwitch(instr[order])
-        order += 1
-    print(hashTable)
+    while instrPointer < len(instr):
+        flag = False
+        if instr[instrPointer][1][0] == 'RETURN':
+            flag = True
+        mySwitch(instr[instrPointer])
+        if flag:
+            pass
+        else:
+            instrPointer += 1
 
 
 if __name__ == "__main__":
