@@ -43,10 +43,12 @@ def readSource(sourceFile):
             okCheck = True
         else:
             sys.exit(32)
-    if not okCheck:
+    if okCheck is False:
         sys.exit(32)
 
     for instruction in tree:
+        if len(instruction.attrib != 2):
+            sys.exit(32)
         order = instruction.attrib["order"]
         opcode = instruction.attrib["opcode"]
 
@@ -61,6 +63,8 @@ def readSource(sourceFile):
             xmlArg = instruction.find("arg"+str(i+1))
             if xmlArg.attrib["type"] not in types:
                 exit(53)
+            if len(xmlArg.attrib) != 1:
+                sys.exit(32)
             if xmlArg.attrib["type"] == 'string' and xmlArg.text is not None:
                 xmlArg.text = changeString(xmlArg.text)
             arg = (xmlArg.attrib["type"], xmlArg.text)
