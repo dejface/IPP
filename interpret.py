@@ -31,7 +31,7 @@ def arg_handler():
     except:
         sys.exit(11)
 
-    return (sourceFile, inputFile)
+    return sourceFile, inputFile
 
 
 def readSource(sourceFile):
@@ -47,7 +47,7 @@ def readSource(sourceFile):
         sys.exit(32)
 
     for instruction in tree:
-        if len(instruction.attrib != 2):
+        if len(instruction.attrib) != 2:
             sys.exit(32)
         order = instruction.attrib["order"]
         opcode = instruction.attrib["opcode"]
@@ -55,6 +55,7 @@ def readSource(sourceFile):
         if opcode == "none" or order is None:
             sys.exit(32)
 
+        array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]
         types = ["string", "int", "var", "type", "nil", "bool", "label"]
         instructions = dict()
         instructions[int(order)] = list()
@@ -66,10 +67,14 @@ def readSource(sourceFile):
             if len(xmlArg.attrib) != 1:
                 sys.exit(32)
             if xmlArg.attrib["type"] == 'string' and xmlArg.text is not None:
+                if any(idx in xmlArg.text for idx in array):
+                    sys.exit(32)
                 xmlArg.text = changeString(xmlArg.text)
-            arg = (xmlArg.attrib["type"], xmlArg.text)
+            if xmlArg.attrib["type"] == 'string' and xmlArg.text is None:
+                arg = ('string', "")
+            else:
+                arg = (xmlArg.attrib["type"], xmlArg.text)
             args.append(arg)
-            #TODO osetrit lepsie XML napr.type apod.
         instructions[int(order)].append(opcode)
         instructions[int(order)].append(args)
         dictOfIntructions.update(instructions)
@@ -168,7 +173,8 @@ def mySwitch(argument):
               "DPRINT": dprint,
               "JUMP": jump,
               "JUMPIFEQ": jumpifeq,
-              "JUMPIFNEQ": jumpifneq}
+              "JUMPIFNEQ": jumpifneq,
+              "BREAK": breakInstr}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -1005,11 +1011,26 @@ def pops(argument):
     else:
         sys.exit(56)
 
+def breakInstr(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    sys.stderr.write("Code is now processing instruction: " + str(instrPointer+1) + '\n' +
+                     "Content in Global Frame: " + str(hashTable["GF"]) + '\n' +
+                     "Names of the defined labels and its index: " + str(hashTable["label"]) + '\n')
+    try:
+        if "TF" in hashTable:
+            sys.stderr.write("Content in Temporary Frame: " + str(hashTable["TF"]) + '\n')
+        if "LF" in hashTable:
+            sys.stderr.write("Content in Local Frame: " + str(hashTable["LF"]) + '\n')
+    except:
+        pass
 
 def main():
     global hashTable
     global instrPointer
     sourceFile, inputFile = arg_handler()
+    sys.stdin = inputFile
     instr = readSource(sourceFile)
     hashTable["GF"] = {}
     hashTable["label"] = {}
