@@ -414,15 +414,15 @@ def lt(argument):
 
     if argument[1][1][0] == 'int':
         result = int(argument[1][1][1]) < int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ('bool', str(result))
+        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
     elif argument[1][1][0] == 'string':
         result = argument[1][1][1] < argument[1][2][1]
-        hashTable[destPrefix][destSuffix] = ('bool', result)
+        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
     elif argument[1][1][0] == 'bool':
         if argument[1][1][1] == 'false' and argument[1][2][1] == 'true':
-            hashTable[destPrefix][destSuffix] = ('bool', 'True')
+            hashTable[destPrefix][destSuffix] = ('bool', 'true')
         else:
-            hashTable[destPrefix][destSuffix] = ('bool', 'False')
+            hashTable[destPrefix][destSuffix] = ('bool', 'false')
     else:
         sys.exit(53)
 
@@ -457,15 +457,15 @@ def gt(argument):
 
     if argument[1][1][0] == 'int':
         result = int(argument[1][1][1]) > int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ('bool', str(result))
+        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
     elif argument[1][1][0] == 'string':
         result = argument[1][1][1] > argument[1][2][1]
-        hashTable[destPrefix][destSuffix] = ('bool', result)
+        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
     elif argument[1][1][0] == 'bool':
         if argument[1][1][1] == 'true' and argument[1][2][1] == 'false':
-            hashTable[destPrefix][destSuffix] = ('bool', 'True')
+            hashTable[destPrefix][destSuffix] = ('bool', 'true')
         else:
-            hashTable[destPrefix][destSuffix] = ('bool', 'False')
+            hashTable[destPrefix][destSuffix] = ('bool', 'false')
     else:
         sys.exit(53)
 
@@ -494,25 +494,26 @@ def eq(argument):
 
     if argument[1][1][0] == 'nil' or argument[1][2][0] == 'nil':
         if argument[1][1][1] == 'nil' and argument[1][2][1] == 'nil':
-            hashTable[destPrefix][destSuffix] = ('bool', 'True')
+            hashTable[destPrefix][destSuffix] = ('bool', 'true')
         else:
-            hashTable[destPrefix][destSuffix] = ('bool', 'False')
+            hashTable[destPrefix][destSuffix] = ('bool', 'false')
         return
 
     if argument[1][1][0] != argument[1][2][0]:
         sys.exit(53)
 
     if argument[1][1][0] == 'int':
-        result = int(argument[1][1][1]) < int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ('bool', str(result))
+        result = int(argument[1][1][1]) == int(argument[1][2][1])
+        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
     elif argument[1][1][0] == 'string':
-        result = argument[1][1][1] < argument[1][2][1]
-        hashTable[destPrefix][destSuffix] = ('bool', result)
+        result = argument[1][1][1] == argument[1][2][1]
+        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
     elif argument[1][1][0] == 'bool':
-        if argument[1][1][1] == 'false' and argument[1][2][1] == 'true':
-            hashTable[destPrefix][destSuffix] = ('bool', 'True')
+        if argument[1][1][1] == 'true' and argument[1][2][1] == 'true' or \
+           argument[1][1][1] == 'false' and argument[1][2][1] == 'false':
+            hashTable[destPrefix][destSuffix] = ('bool', 'true')
         else:
-            hashTable[destPrefix][destSuffix] = ('bool', 'False')
+            hashTable[destPrefix][destSuffix] = ('bool', 'false')
     else:
         sys.exit(53)
 
@@ -540,9 +541,9 @@ def andInstr(argument):
         sys.exit(53)
 
     if argument[1][1][1] == 'true' and argument[1][2][1] == 'true':
-        hashTable[destPrefix][destSuffix] = ('bool', 'True')
+        hashTable[destPrefix][destSuffix] = ('bool', 'true')
     else:
-        hashTable[destPrefix][destSuffix] = ('bool', 'False')
+        hashTable[destPrefix][destSuffix] = ('bool', 'false')
 
 # OR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def orInstr(argument):
@@ -567,10 +568,10 @@ def orInstr(argument):
     if argument[1][1][0] != 'bool' or argument[1][2][0] != 'bool':
         sys.exit(53)
 
-    if argument[1][1][1] == 'true' or argument[1][2][1] != 'true':
-        hashTable[destPrefix][destSuffix] = ('bool', 'True')
+    if argument[1][1][1] == 'true' or argument[1][2][1] == 'true':
+        hashTable[destPrefix][destSuffix] = ('bool', 'true')
     else:
-        hashTable[destPrefix][destSuffix] = ('bool', 'False')
+        hashTable[destPrefix][destSuffix] = ('bool', 'false')
 
 # NOT ⟨var⟩ ⟨symb1⟩
 def notInstr(argument):
@@ -593,9 +594,9 @@ def notInstr(argument):
         sys.exit(53)
 
     if argument[1][1][1] == 'true':
-        hashTable[destPrefix][destSuffix] = ('bool', 'False')
+        hashTable[destPrefix][destSuffix] = ('bool', 'false')
     else:
-        hashTable[destPrefix][destSuffix] = ('bool', 'True')
+        hashTable[destPrefix][destSuffix] = ('bool', 'true')
 
 # INT2CHAR ⟨var⟩ ⟨symb1⟩
 def int2char(argument):
@@ -689,7 +690,7 @@ def read(argument):
                     hashTable[destPrefix][destSuffix] = ('nil', 'nil')
         elif type == 'string':
             if result == "":
-                hashTable[destPrefix][destSuffix] = ('nil', 'nil')
+                hashTable[destPrefix][destSuffix] = ('string', '')
             else:
                 try:
                     hashTable[destPrefix][destSuffix] = ('string', str(result))
@@ -697,7 +698,7 @@ def read(argument):
                     hashTable[destPrefix][destSuffix] = ('nil', 'nil')
         elif type == 'bool':
             if result == "":
-                hashTable[destPrefix][destSuffix] = ('bool', 'false')
+                hashTable[destPrefix][destSuffix] = ('nil', 'nil')
             else:
                 if str(result).lower() != 'true':
                     hashTable[destPrefix][destSuffix] = ('bool', 'false')
@@ -826,14 +827,14 @@ def setchar(argument):
     if word[0] != 'string':
         sys.exit(53)
     index = int(argument[1][1][1])
-    char = argument[1][2][1][0]
+    char = argument[1][2][1]
     if char == "":
         sys.exit(58)
     if int(index) < 0 or int(index) > len(word[1])-1:
         sys.exit(58)
 
     result = word[1]
-    result = result[:index] + char + result[index+1:]
+    result = result[:index] + char[0:1] + result[index+1:]
 
     hashTable[destPrefix][destSuffix] = ('string', str(result))
 
@@ -919,6 +920,9 @@ def jumpifeq(argument):
     if argument[1][0][0] != 'label':
         sys.exit(53)
 
+    if argument[1][0][1] not in hashTable["label"]:
+        sys.exit(52)
+
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][0][1])
         argument[1][1] = var
@@ -944,6 +948,9 @@ def jumpifneq(argument):
 
     if argument[1][0][0] != 'label':
         sys.exit(53)
+
+    if argument[1][0][1] not in hashTable["label"]:
+        sys.exit(52)
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][0][1])
@@ -1006,7 +1013,7 @@ def pops(argument):
     if code != 0:
         sys.exit(code)
 
-    if stackOfInstrs != 0:
+    if len(stackOfInstrs) != 0:
         hashTable[destPref][destSuf] = stackOfInstrs.pop()
     else:
         sys.exit(56)
