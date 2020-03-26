@@ -4,14 +4,18 @@ import sys
 
 hashTable = {}
 stackOfFrames = list()
-stackOfInstrs = list()
+stackOfVars = list()
 stackOfCalls = list()
-instrPointer = 0
+instrPointer, varCounter, instrCounter = 0, 0, 0
+
 
 def arg_handler():
     argsparser = argparse.ArgumentParser(description="Loads XML code, transforms it to IPPcode20 and executes it")
     argsparser.add_argument("--source", nargs=1, help="Input file with XML code")
     argsparser.add_argument("--input", nargs=1, help="File with inputs(f.e. instruction READ)")
+    argsparser.add_argument("--stats", nargs=1, help="Specifies file where wtats will be written")
+    argsparser.add_argument("--insts", action="store_true", help="Number of executed instructions, requires --stats")
+    argsparser.add_argument("--vars", action="store_true", help="Number of maximum initialized vars, requires --stats")
 
     args = argsparser.parse_args()
 
@@ -31,7 +35,17 @@ def arg_handler():
     except:
         sys.exit(11)
 
-    return sourceFile, inputFile
+    statsFile = None
+    try:
+        if args.stats is not None:
+            statsFile = open(args.stats[0], "w")
+    except:
+        sys.exit(12)
+
+    if (args.insts == True or args.vars == True) and statsFile is None:
+        sys.exit(10)
+
+    return sourceFile, inputFile, statsFile
 
 
 def readSource(sourceFile):
@@ -82,11 +96,13 @@ def readSource(sourceFile):
 
     return dictOfIntructions
 
+
 def checkSymb(var):
     if var == 'string' or var == 'int' or var == 'bool' or var == 'nil':
         return True
     else:
         return False
+
 
 def editVar(var):
     if var.find("@") == -1:
@@ -97,6 +113,7 @@ def editVar(var):
 
     return prefix, suffix
 
+
 def changeString(str):
     for index, change in enumerate(str.split("\\")):
         if index == 0:
@@ -104,6 +121,7 @@ def changeString(str):
         else:
             str = str + chr(int(change[0:3])) + change[3:]
     return str
+
 
 def checkErr(var, expected1, expected2, *symb):
     if var != 'var':
@@ -120,6 +138,7 @@ def checkErr(var, expected1, expected2, *symb):
             return 53
     return 0
 
+
 def inTable(pref, suf):
 
     if pref not in hashTable:
@@ -127,6 +146,7 @@ def inTable(pref, suf):
     if suf not in hashTable[pref]:
         return 54
     return 0
+
 
 def fromTable(arg):
     pref, suf = editVar(arg)
@@ -138,6 +158,7 @@ def fromTable(arg):
     if result is None:
         sys.exit(56)
     return result
+
 
 def mySwitch(argument):
     switcher = {"MOVE": move,
@@ -174,7 +195,22 @@ def mySwitch(argument):
               "JUMP": jump,
               "JUMPIFEQ": jumpifeq,
               "JUMPIFNEQ": jumpifneq,
-              "BREAK": breakInstr}
+              "BREAK": breakInstr,
+              "ADDS": adds,
+              "SUBS": subs,
+              "MULS": muls,
+              "IDIVS": idivs,
+              "LTS": lts,
+              "GTS": gts,
+              "EQS": eqs,
+              "ANDS": ands,
+              "ORS": ors,
+              "NOTS": nots,
+              "INT2CHARS": int2chars,
+              "STRI2INTS": stri2ints,
+              "JUMPIFEQS": jumpifeqs,
+              "JUMPIFNEQS": jumpifneqs,
+              "CLEARS": clears}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -205,16 +241,16 @@ def move(argument):
 
     hashTable[destPrefix][destSuffix] = var
 
-# creates a temporary frame TF
 
+# creates a temporary frame TF
 def createframe(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
     hashTable["TF"] = {}
 
+
 # pushes TF to stackOfFrames which means it will be covered by LF,
 # if TF doeasn't exists, error will be raised
-
 def pushframe(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
@@ -224,8 +260,8 @@ def pushframe(argument):
         stackOfFrames.append(hashTable["LF"])   # appending frame to stack
     hashTable["LF"] = hashTable.pop("TF")   # frame TF is replaced by LF
 
-# pops a frame TODO
 
+# pops a frame TODO
 def popframe(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
@@ -237,7 +273,6 @@ def popframe(argument):
 
 
 # defines variable var in a specific frame
-
 def defvar(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -302,6 +337,7 @@ def add(argument):
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
 
+
 # SUB ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def sub(argument):
     # TODO aj v add overit definovanost v tabulke a ak by nebol type int ale var
@@ -329,6 +365,7 @@ def sub(argument):
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
 
+
 # MUL ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def mul(argument):
     if (len(argument[1])) != 3:
@@ -354,6 +391,7 @@ def mul(argument):
     result = int(argument[1][1][1]) * int(argument[1][2][1])
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
+
 
 # IDIV ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def idiv(argument):
@@ -382,6 +420,7 @@ def idiv(argument):
     result = int(argument[1][1][1]) // int(argument[1][2][1])
 
     hashTable[destPrefix][destSuffix] = ("int", str(result))
+
 
 # LT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def lt(argument):
@@ -426,6 +465,7 @@ def lt(argument):
     else:
         sys.exit(53)
 
+
 # GT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def gt(argument):
     if (len(argument[1])) != 3:
@@ -468,6 +508,7 @@ def gt(argument):
             hashTable[destPrefix][destSuffix] = ('bool', 'false')
     else:
         sys.exit(53)
+
 
 # EQ ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def eq(argument):
@@ -517,6 +558,7 @@ def eq(argument):
     else:
         sys.exit(53)
 
+
 # AND ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def andInstr(argument):
     if (len(argument[1])) != 3:
@@ -544,6 +586,7 @@ def andInstr(argument):
         hashTable[destPrefix][destSuffix] = ('bool', 'true')
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'false')
+
 
 # OR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def orInstr(argument):
@@ -573,6 +616,7 @@ def orInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'false')
 
+
 # NOT ⟨var⟩ ⟨symb1⟩
 def notInstr(argument):
     if (len(argument[1])) != 2:
@@ -598,6 +642,7 @@ def notInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'true')
 
+
 # INT2CHAR ⟨var⟩ ⟨symb1⟩
 def int2char(argument):
     if (len(argument[1])) != 2:
@@ -622,6 +667,7 @@ def int2char(argument):
         hashTable[destPrefix][destSuffix] = ('string', chr(int(argument[1][1][1])))
     except:
         sys.exit(58)
+
 
 # STRI2INT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def stri2int(argument):
@@ -657,6 +703,7 @@ def stri2int(argument):
     except:
         sys.exit(58)
 
+
 def read(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
@@ -690,7 +737,7 @@ def read(argument):
                     hashTable[destPrefix][destSuffix] = ('nil', 'nil')
         elif type == 'string':
             if result == "":
-                hashTable[destPrefix][destSuffix] = ('string', '')
+                hashTable[destPrefix][destSuffix] = ('nil', 'nil')
             else:
                 try:
                     hashTable[destPrefix][destSuffix] = ('string', str(result))
@@ -706,6 +753,7 @@ def read(argument):
                     hashTable[destPrefix][destSuffix] = ('bool', 'true')
     else:
         sys.exit(57)
+
 
 def write(argument):
     if (len(argument[1])) != 1:
@@ -748,6 +796,7 @@ def concat(argument):
 
     hashTable[destPrefix][destSuffix] = ('string', str(argument[1][1][1] + argument[1][2][1]))
 
+
 # STRLEN ⟨var⟩ ⟨symb1⟩
 def strlen(argument):
     if (len(argument[1])) != 2:
@@ -769,6 +818,7 @@ def strlen(argument):
         sys.exit(code)
 
     hashTable[destPrefix][destSuffix] = ('int', int(len(argument[1][1][1])))
+
 
 # GETCHAR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def getchar(argument):
@@ -838,6 +888,7 @@ def setchar(argument):
 
     hashTable[destPrefix][destSuffix] = ('string', str(result))
 
+
 def typeInstr(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
@@ -868,6 +919,7 @@ def typeInstr(argument):
 
     hashTable[destPrefix][destSuffix] = ('string', str(result))
 
+
 def exitInstr(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -884,6 +936,7 @@ def exitInstr(argument):
     else:
         sys.exit(57)
 
+
 def createLabel(argument):
     global instrPointer
     if (len(argument[1][1])) != 1:
@@ -896,8 +949,10 @@ def createLabel(argument):
         sys.exit(52)
     hashTable["label"][argument[1][1][0][1]] = argument[0]-1
 
+
 def label(argument):
     pass
+
 
 def jump(argument):
     global instrPointer
@@ -911,6 +966,7 @@ def jump(argument):
         sys.exit(52)
 
     instrPointer = hashTable["label"][argument[1][0][1]]
+
 
 def jumpifeq(argument):
     global instrPointer
@@ -934,8 +990,8 @@ def jumpifeq(argument):
         if str(argument[1][1][1]) == str(argument[1][2][1]):
             instrPointer = hashTable["label"][argument[1][0][1]]
     elif str(argument[1][1][0]) == 'nil' or str(argument[1][2][0]) == 'nil':
-        if str(argument[1][1][0]) == 'string' or str(argument[1][2][0]) == 'string':
-            if str(argument[1][1][1]) == "" or str(argument[1][2][1]) == "":
+        if str(argument[1][1][0]) == 'nil' and str(argument[1][2][0]) == 'nil':
+            if str(argument[1][1][1]) == 'nil' and str(argument[1][2][1]) == 'nil':
                 instrPointer = hashTable["label"][argument[1][0][1]]
     else:
         sys.exit(53)
@@ -963,8 +1019,8 @@ def jumpifneq(argument):
         if str(argument[1][1][1]) != str(argument[1][2][1]):
             instrPointer = hashTable["label"][argument[1][0][1]]
     elif str(argument[1][1][0]) == 'nil' or str(argument[1][2][0]) == 'nil':
-        if str(argument[1][1][0]) == 'string' or str(argument[1][2][0]) == 'string':
-            if str(argument[1][1][1]) == "" or str(argument[1][2][1]) == "":
+        if str(argument[1][1][0]) == 'nil' and str(argument[1][2][0]) == 'nil':
+            if str(argument[1][1][1]) == "" and str(argument[1][2][1]) == "":
                 pass
             else:
                 instrPointer = hashTable["label"][argument[1][0][1]]
@@ -984,6 +1040,7 @@ def dprint(argument):
 
     sys.stderr.write(str(argument[1][0][1]))
 
+
 def pushs(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -999,7 +1056,8 @@ def pushs(argument):
     if checkSymb(argument[1][0][0]) is False:
         sys.exit(53)
 
-    stackOfInstrs.append((argument[1][0][0], argument[1][0][1]))
+    stackOfVars.append((argument[1][0][0], argument[1][0][1]))
+
 
 def pops(argument):
     if (len(argument[1])) != 1:
@@ -1013,10 +1071,11 @@ def pops(argument):
     if code != 0:
         sys.exit(code)
 
-    if len(stackOfInstrs) != 0:
-        hashTable[destPref][destSuf] = stackOfInstrs.pop()
+    if len(stackOfVars) != 0:
+        hashTable[destPref][destSuf] = stackOfVars.pop()
     else:
         sys.exit(56)
+
 
 def breakInstr(argument):
     if (len(argument[1])) > 0:
@@ -1033,10 +1092,440 @@ def breakInstr(argument):
     except:
         pass
 
+############################################################################
+#                           ROZSIRENIE STACK                               #
+############################################################################
+
+
+def adds(argument):
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var2[0] != 'int' or var1[0] != 'int':
+        sys.exit(53)
+
+    result = int(var1[1]) + int(var2[1])
+    stackOfVars.append(('int', str(result)))
+
+
+def subs(argument):
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var2[0] != 'int' or var1[0] != 'int':
+        sys.exit(53)
+
+    result = int(var1[1]) - int(var2[1])
+    stackOfVars.append(('int', str(result)))
+
+
+def muls(argument):
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var2[0] != 'int' or var1[0] != 'int':
+        sys.exit(53)
+
+    result = int(var1[1]) * int(var2[1])
+    stackOfVars.append(('int', str(result)))
+
+
+def idivs(argument):
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var2[0] != 'int' or var1[0] != 'int':
+        sys.exit(53)
+
+    if int(var2[1]) == 0:
+        sys.exit(57)
+
+    result = int(var1[1]) // int(var2[1])
+    stackOfVars.append(('int', str(result)))
+
+
+def lts(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] != var2[0]:
+        sys.exit(53)
+
+    if var1[0] == 'nil' or var2[0] == 'nil':
+        sys.exit(53)
+
+    if var1[0] == 'int' and var2[0] == 'int':
+        result = int(var1[1]) < int(var2[1])
+        stackOfVars.append(('bool', str(result).lower()))
+    elif var1[0] == 'string' and var2[0] == 'string':
+        result = str(var1[1]) < str(var2[1])
+        stackOfVars.append(('bool', str(result).lower()))
+    elif var1[0] == 'bool' and var2[0] == 'bool':
+        if var1[1] == 'false' and var2[1] == 'true':
+            stackOfVars.append(('bool', 'true'))
+        else:
+            stackOfVars.append(('bool', 'false'))
+    else:
+        sys.exit(53)
+
+
+def gts(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] != var2[0]:
+        sys.exit(53)
+
+    if var1[0] == 'nil' or var2[0] == 'nil':
+        sys.exit(53)
+
+    if var1[0] == 'int' and var2[0] == 'int':
+        result = int(var1[1]) > int(var2[1])
+        stackOfVars.append(('bool', str(result).lower()))
+    elif var1[0] == 'string' and var2[0] == 'string':
+        result = str(var1[1]) > str(var2[1])
+        stackOfVars.append(('bool', str(result).lower()))
+    elif var1[0] == 'bool' and var2[0] == 'bool':
+        if var1[1] == 'true' and var2[1] == 'false':
+            stackOfVars.append(('bool', 'true'))
+        else:
+            stackOfVars.append(('bool', 'false'))
+    else:
+        sys.exit(53)
+
+def eqs(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] == 'nil' or var2[0] == 'nil':
+        if var1[1] == 'nil' and var2[1] == 'nil':
+            stackOfVars.append(('bool', 'true'))
+        else:
+            stackOfVars.append(('bool', 'false'))
+        return
+
+    if var1[0] != var2[0]:
+        sys.exit(53)
+
+    if var1[0] == 'int' and var2[0] == 'int':
+        result = int(var1[1]) == int(var2[1])
+        stackOfVars.append(('bool', str(result).lower()))
+    elif var1[0] == 'string' and var2[0] == 'string':
+        result = str(var1[1]) == str(var2[1])
+        stackOfVars.append(('bool', str(result).lower()))
+    elif var1[0] == 'bool' and var2[0] == 'bool':
+        if var1[1] == var2[1]:
+            stackOfVars.append(('bool', 'true'))
+        else:
+            stackOfVars.append(('bool', 'false'))
+    else:
+        sys.exit(53)
+
+
+def ands(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] != 'bool' or var2[0] != 'bool':
+        sys.exit(53)
+
+    if var1[1] == 'true' and var2[1] == 'true':
+        stackOfVars.append(('bool', 'true'))
+    else:
+        stackOfVars.append(('bool', 'false'))
+
+
+def ors(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] != 'bool' or var2[0] != 'bool':
+        sys.exit(53)
+
+    if var1[1] == 'true' or var2[1] == 'true':
+        stackOfVars.append(('bool', 'true'))
+    else:
+        stackOfVars.append(('bool', 'false'))
+
+
+def nots(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    try:
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] != 'bool':
+        sys.exit(53)
+
+    if var1[1] == 'true':
+        stackOfVars.append(('bool', 'false'))
+    else:
+        stackOfVars.append(('bool', 'true'))
+
+
+def int2chars(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    try:
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] != 'int':
+        sys.exit(53)
+
+    try:
+        stackOfVars.append(('string', chr(int(var1[1]))))
+    except:
+        sys.exit(58)
+
+def stri2ints(argument):
+    if (len(argument[1])) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var2[0] != 'int':
+        sys.exit(53)
+
+    if var1[0] != 'string':
+        sys.exit(53)
+
+    if int(var2[1]) < 0 or int(var2[1]) > len(var1[1]):
+        sys.exit(58)
+
+    try:
+        result = var1[1][int(var2[1])]
+        stackOfVars.append(('int', ord(result)))
+    except:
+        sys.exit(58)
+
+
+def jumpifeqs(argument):
+    global instrPointer
+    if (len(argument[1])) != 1:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'label':
+        sys.exit(32)
+    if argument[1][0][1] not in hashTable["label"]:
+        sys.exit(52)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] == var2[0]:
+        if var1[1] == var2[1]:
+            instrPointer = hashTable["label"][argument[1][0][1]]
+    elif var1[0] == 'nil' or var2[0] == 'nil':
+        if var1[0] == 'nil' and var2[0] == 'nil':
+            if var1[1] == 'nil' and var2[1] == 'nil':
+                instrPointer = hashTable["label"][argument[1][0][1]]
+    else:
+        sys.exit(53)
+
+
+def jumpifneqs(argument):
+    global instrPointer
+    if (len(argument[1])) != 1:
+        sys.exit(32)
+
+    if argument[1][0][0] != 'label':
+        sys.exit(32)
+    if argument[1][0][1] not in hashTable["label"]:
+        sys.exit(52)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] == var2[0]:
+        if var1[1] != var2[1]:
+            instrPointer = hashTable["label"][argument[1][0][1]]
+    elif var1[0] == 'nil' or var2[0] == 'nil':
+        if var1[0] == 'nil' and var2[0] == 'nil':
+            if var1[1] == 'nil' and var2[1] == 'nil':
+                pass
+            else:
+                instrPointer = hashTable["label"][argument[1][0][1]]
+        else:
+            instrPointer = hashTable["label"][argument[1][0][1]]
+    else:
+        sys.exit(53)
+
+
+def clears(argument):
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    for i in range(0,len(stackOfVars)):
+        stackOfVars.pop()
+
 def main():
     global hashTable
     global instrPointer
-    sourceFile, inputFile = arg_handler()
+    global instrCounter
+    global varCounter
+    sourceFile, inputFile, statsFile = arg_handler()
     sys.stdin = inputFile
     instr = readSource(sourceFile)
     hashTable["GF"] = {}
@@ -1049,11 +1538,41 @@ def main():
         flag = False
         if instr[instrPointer][1][0] == 'RETURN':
             flag = True
+        if statsFile is not None:
+            instrCounter += 1
         mySwitch(instr[instrPointer])
+
         if flag:
             pass
         else:
             instrPointer += 1
+
+        if statsFile is not None:
+            counter = 0
+            for var in hashTable["GF"]:
+                if var is not None:
+                    counter += 1
+            if "LF" in hashTable:
+                if hashTable["LF"] is not None:
+                    for var in hashTable["LF"]:
+                        if var is not None:
+                            counter += 1
+            if "TF" in hashTable:
+                if hashTable["TF"] is not None:
+                    for var in hashTable["TF"]:
+                        if var is not None:
+                            counter += 1
+            varCounter = max(varCounter, counter)
+
+    if statsFile is not None:
+        for arg in sys.argv:
+            if arg == '--insts':
+                statsFile.write(str(instrCounter) + '\n')
+            if arg == '--vars':
+                statsFile.write(str(varCounter) + '\n')
+        statsFile.close()
+
+    print(stackOfVars)
 
 
 if __name__ == "__main__":
