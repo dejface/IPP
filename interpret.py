@@ -42,7 +42,7 @@ def arg_handler():
     except:
         sys.exit(12)
 
-    if (args.insts == True or args.vars == True) and statsFile is None:
+    if (args.insts is True or args.vars is True) and statsFile is None:
         sys.exit(10)
 
     return sourceFile, inputFile, statsFile
@@ -51,11 +51,18 @@ def arg_handler():
 def readSource(sourceFile):
     dictOfIntructions = dict()
     okCheck = False
-    tree = ET.parse(sourceFile).getroot()
+    try:
+        tree = ET.parse(sourceFile).getroot()
+    except:
+        sys.exit(32)
+
+    opt = ['language', 'name', 'description']
     for attrib, item in tree.attrib.items():
         if attrib == "language" and item == "IPPcode20":
             okCheck = True
         else:
+            sys.exit(32)
+        if attrib not in opt:
             sys.exit(32)
     if okCheck is False:
         sys.exit(32)
@@ -70,12 +77,12 @@ def readSource(sourceFile):
             sys.exit(32)
 
         array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]
-        types = ["string", "int", "var", "type", "nil", "bool", "label"]
+        types = ["string", "int", "var", "type", "nil", "bool", "label", "float"]
         instructions = dict()
         instructions[int(order)] = list()
         args = list()
         for i in range(len(instruction)):
-            xmlArg = instruction.find("arg"+str(i+1))
+            xmlArg = instruction.find("arg" + str(i + 1))
             if xmlArg.attrib["type"] not in types:
                 exit(53)
             if len(xmlArg.attrib) != 1:
@@ -98,7 +105,8 @@ def readSource(sourceFile):
 
 
 def checkSymb(var):
-    if var == 'string' or var == 'int' or var == 'bool' or var == 'nil':
+    if var == 'string' or var == 'int' or var == 'bool' or var == 'nil'\
+            or var == 'float':
         return True
     else:
         return False
@@ -140,7 +148,6 @@ def checkErr(var, expected1, expected2, *symb):
 
 
 def inTable(pref, suf):
-
     if pref not in hashTable:
         return 55
     if suf not in hashTable[pref]:
@@ -162,55 +169,55 @@ def fromTable(arg):
 
 def mySwitch(argument):
     switcher = {"MOVE": move,
-              "CREATEFRAME": createframe,
-              "PUSHFRAME": pushframe,
-              "POPFRAME": popframe,
-              "DEFVAR": defvar,
-              "CALL": call,
-              "RETURN": returnInstr,
-              "PUSHS": pushs,
-              "POPS": pops,
-              "ADD": add,
-              "SUB": sub,
-              "MUL": mul,
-              "IDIV": idiv,
-              "LT": lt,
-              "GT": gt,
-              "EQ": eq,
-              "AND": andInstr,
-              "OR": orInstr,
-              "NOT": notInstr,
-              "INT2CHAR": int2char,
-              "STRI2INT": stri2int,
-              "READ": read,
-              "WRITE": write,
-              "CONCAT": concat,
-              "STRLEN": strlen,
-              "GETCHAR": getchar,
-              "SETCHAR": setchar,
-              "TYPE": typeInstr,
-              "EXIT": exitInstr,
-              "LABEL": label,
-              "DPRINT": dprint,
-              "JUMP": jump,
-              "JUMPIFEQ": jumpifeq,
-              "JUMPIFNEQ": jumpifneq,
-              "BREAK": breakInstr,
-              "ADDS": adds,
-              "SUBS": subs,
-              "MULS": muls,
-              "IDIVS": idivs,
-              "LTS": lts,
-              "GTS": gts,
-              "EQS": eqs,
-              "ANDS": ands,
-              "ORS": ors,
-              "NOTS": nots,
-              "INT2CHARS": int2chars,
-              "STRI2INTS": stri2ints,
-              "JUMPIFEQS": jumpifeqs,
-              "JUMPIFNEQS": jumpifneqs,
-              "CLEARS": clears}
+                "CREATEFRAME": createframe,
+                "PUSHFRAME": pushframe,
+                "POPFRAME": popframe,
+                "DEFVAR": defvar,
+                "CALL": call,
+                "RETURN": returnInstr,
+                "PUSHS": pushs,
+                "POPS": pops,
+                "ADD": add,
+                "SUB": sub,
+                "MUL": mul,
+                "IDIV": idiv,
+                "LT": lt,
+                "GT": gt,
+                "EQ": eq,
+                "AND": andInstr,
+                "OR": orInstr,
+                "NOT": notInstr,
+                "INT2CHAR": int2char,
+                "STRI2INT": stri2int,
+                "READ": read,
+                "WRITE": write,
+                "CONCAT": concat,
+                "STRLEN": strlen,
+                "GETCHAR": getchar,
+                "SETCHAR": setchar,
+                "TYPE": typeInstr,
+                "EXIT": exitInstr,
+                "LABEL": label,
+                "DPRINT": dprint,
+                "JUMP": jump,
+                "JUMPIFEQ": jumpifeq,
+                "JUMPIFNEQ": jumpifneq,
+                "BREAK": breakInstr,
+                "ADDS": adds,
+                "SUBS": subs,
+                "MULS": muls,
+                "IDIVS": idivs,
+                "LTS": lts,
+                "GTS": gts,
+                "EQS": eqs,
+                "ANDS": ands,
+                "ORS": ors,
+                "NOTS": nots,
+                "INT2CHARS": int2chars,
+                "STRI2INTS": stri2ints,
+                "JUMPIFEQS": jumpifeqs,
+                "JUMPIFNEQS": jumpifneqs,
+                "CLEARS": clears}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -257,8 +264,8 @@ def pushframe(argument):
     if "TF" not in hashTable:
         sys.exit(55)
     if "LF" in hashTable:
-        stackOfFrames.append(hashTable["LF"])   # appending frame to stack
-    hashTable["LF"] = hashTable.pop("TF")   # frame TF is replaced by LF
+        stackOfFrames.append(hashTable["LF"])  # appending frame to stack
+    hashTable["LF"] = hashTable.pop("TF")  # frame TF is replaced by LF
 
 
 # pops a frame TODO
@@ -296,7 +303,7 @@ def call(argument):
     if argument[1][0][1] not in hashTable["label"]:
         sys.exit(52)
 
-    stackOfCalls.append(instrPointer+1)
+    stackOfCalls.append(instrPointer + 1)
     instrPointer = hashTable["label"][argument[1][0][1]]
 
 
@@ -323,7 +330,10 @@ def add(argument):
         var = fromTable(argument[1][2][1])
         argument[1][2] = var
 
-    exp = 'int'
+    if argument[1][1][0] == 'float' or argument[1][2][0] == 'float':
+        exp = 'float'
+    else:
+        exp = 'int'
     code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
     if code != 0:
         sys.exit(code)
@@ -333,14 +343,18 @@ def add(argument):
     if code != 0:
         sys.exit(code)
 
-    result = int(argument[1][1][1]) + int(argument[1][2][1])
-
-    hashTable[destPrefix][destSuffix] = ("int", str(result))
+    if exp == 'float':
+        result = float(float.fromhex(argument[1][1][1])) + float(float.fromhex(argument[1][2][1]))
+        result = float.hex(result)
+        hashTable[destPrefix][destSuffix] = ("float", str(result))
+    else:
+        result = int(argument[1][1][1]) + int(argument[1][2][1])
+        hashTable[destPrefix][destSuffix] = ("int", str(result))
 
 
 # SUB ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def sub(argument):
-    # TODO aj v add overit definovanost v tabulke a ak by nebol type int ale var
+
     if (len(argument[1])) != 3:
         sys.exit(32)
 
@@ -351,7 +365,11 @@ def sub(argument):
         var = fromTable(argument[1][2][1])
         argument[1][2] = var
 
-    exp = 'int'
+    if argument[1][1][0] == 'float' or argument[1][2][0] == 'float':
+        exp = 'float'
+    else:
+        exp = 'int'
+
     code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
     if code != 0:
         sys.exit(code)
@@ -361,9 +379,13 @@ def sub(argument):
     if code != 0:
         sys.exit(code)
 
-    result = int(argument[1][1][1]) - int(argument[1][2][1])
-
-    hashTable[destPrefix][destSuffix] = ("int", str(result))
+    if exp == 'float':
+        result = float(float.fromhex(argument[1][1][1])) - float(float.fromhex(argument[1][2][1]))
+        result = float.hex(result)
+        hashTable[destPrefix][destSuffix] = ("float", str(result))
+    else:
+        result = int(argument[1][1][1]) - int(argument[1][2][1])
+        hashTable[destPrefix][destSuffix] = ("int", str(result))
 
 
 # MUL ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -378,7 +400,11 @@ def mul(argument):
         var = fromTable(argument[1][2][1])
         argument[1][2] = var
 
-    exp = 'int'
+    if argument[1][1][0] == 'float' or argument[1][2][0] == 'float':
+        exp = 'float'
+    else:
+        exp = 'int'
+
     code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
     if code != 0:
         sys.exit(code)
@@ -388,9 +414,13 @@ def mul(argument):
     if code != 0:
         sys.exit(code)
 
-    result = int(argument[1][1][1]) * int(argument[1][2][1])
-
-    hashTable[destPrefix][destSuffix] = ("int", str(result))
+    if exp == 'float':
+        result = float(float.fromhex(argument[1][1][1])) * float(float.fromhex(argument[1][2][1]))
+        result = float.hex(result)
+        hashTable[destPrefix][destSuffix] = ("float", str(result))
+    else:
+        result = int(argument[1][1][1]) * int(argument[1][2][1])
+        hashTable[destPrefix][destSuffix] = ("int", str(result))
 
 
 # IDIV ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -551,7 +581,7 @@ def eq(argument):
         hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
     elif argument[1][1][0] == 'bool':
         if argument[1][1][1] == 'true' and argument[1][2][1] == 'true' or \
-           argument[1][1][1] == 'false' and argument[1][2][1] == 'false':
+                argument[1][1][1] == 'false' and argument[1][2][1] == 'false':
             hashTable[destPrefix][destSuffix] = ('bool', 'true')
         else:
             hashTable[destPrefix][destSuffix] = ('bool', 'false')
@@ -845,7 +875,7 @@ def getchar(argument):
 
     word = argument[1][1][1]
     index = argument[1][2][1]
-    if int(index) < 0 or int(index) > len(word)-1:
+    if int(index) < 0 or int(index) > len(word) - 1:
         sys.exit(58)
 
     hashTable[destPrefix][destSuffix] = ('string', str(word[int(index)]))
@@ -880,11 +910,11 @@ def setchar(argument):
     char = argument[1][2][1]
     if char == "":
         sys.exit(58)
-    if int(index) < 0 or int(index) > len(word[1])-1:
+    if int(index) < 0 or int(index) > len(word[1]) - 1:
         sys.exit(58)
 
     result = word[1]
-    result = result[:index] + char[0:1] + result[index+1:]
+    result = result[:index] + char[0:1] + result[index + 1:]
 
     hashTable[destPrefix][destSuffix] = ('string', str(result))
 
@@ -947,7 +977,7 @@ def createLabel(argument):
 
     if argument[1][1][0][1] in hashTable["label"]:
         sys.exit(52)
-    hashTable["label"][argument[1][1][0][1]] = argument[0]-1
+    hashTable["label"][argument[1][1][0][1]] = argument[0] - 1
 
 
 def label(argument):
@@ -1047,7 +1077,7 @@ def pushs(argument):
 
     if argument[1][0][0] == 'var':
         pref, suf = editVar(argument[1][0][1])
-        code = inTable(pref,suf)
+        code = inTable(pref, suf)
         if code != 0:
             sys.exit(code)
         var = fromTable(argument[1][0][1])
@@ -1081,7 +1111,7 @@ def breakInstr(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
 
-    sys.stderr.write("Code is now processing instruction: " + str(instrPointer+1) + '\n' +
+    sys.stderr.write("Code is now processing instruction: " + str(instrPointer + 1) + '\n' +
                      "Content in Global Frame: " + str(hashTable["GF"]) + '\n' +
                      "Names of the defined labels and its index: " + str(hashTable["label"]) + '\n')
     try:
@@ -1091,6 +1121,7 @@ def breakInstr(argument):
             sys.stderr.write("Content in Local Frame: " + str(hashTable["LF"]) + '\n')
     except:
         pass
+
 
 ############################################################################
 #                           ROZSIRENIE STACK                               #
@@ -1271,6 +1302,7 @@ def gts(argument):
     else:
         sys.exit(53)
 
+
 def eqs(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
@@ -1408,6 +1440,7 @@ def int2chars(argument):
     except:
         sys.exit(58)
 
+
 def stri2ints(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
@@ -1517,8 +1550,9 @@ def clears(argument):
     if len(argument[1]) > 0:
         sys.exit(32)
 
-    for i in range(0,len(stackOfVars)):
+    for i in range(0, len(stackOfVars)):
         stackOfVars.pop()
+
 
 def main():
     global hashTable
@@ -1573,6 +1607,7 @@ def main():
         statsFile.close()
 
     print(stackOfVars)
+    print(hashTable)
 
 
 if __name__ == "__main__":
