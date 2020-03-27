@@ -84,21 +84,22 @@ def readSource(sourceFile):
             sys.exit(32)
     if okCheck is False:
         sys.exit(32)
-    try:
-        for instruction in tree:
-            if len(instruction.attrib) != 2:
-                sys.exit(32)
-            order = instruction.attrib["order"]
-            opcode = instruction.attrib["opcode"]
 
-            if opcode == "none" or order is None:
-                sys.exit(32)
+    for instruction in tree:
+        if len(instruction.attrib) != 2:
+            sys.exit(32)
+        order = instruction.attrib["order"]
+        opcode = instruction.attrib["opcode"]
 
-            array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]    # these are forbidden
-            types = ["string", "int", "var", "type", "nil", "bool", "label", "float"]
-            instructions = dict()
-            instructions[int(order)] = list()
-            args = list()
+        if opcode == "none" or order is None:
+            sys.exit(32)
+
+        array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]    # these are forbidden
+        types = ["string", "int", "var", "type", "nil", "bool", "label", "float"]
+        instructions = dict()
+        instructions[int(order)] = list()
+        args = list()
+        try:
             for i in range(len(instruction)):
                 xmlArg = instruction.find("arg" + str(i + 1))
                 if xmlArg.attrib["type"] not in types:
@@ -114,15 +115,24 @@ def readSource(sourceFile):
                 else:
                     arg = (xmlArg.attrib["type"], xmlArg.text)
                 args.append(arg)
-            instructions[int(order)].append(opcode)
-            instructions[int(order)].append(args)
-            dictOfIntructions.update(instructions)
-    except:
-        sys.exit(31)
+                if xmlArg.tail and xmlArg.tail.strip() != "":
+                    raise
+        except:
+            sys.exit(31)
+        instructions[int(order)].append(opcode)
+        instructions[int(order)].append(args)
+        dictOfIntructions.update(instructions)
+        if (instruction.tail and instruction.tail.strip() != "") or\
+                (instruction.text and instruction.text.strip() != ""):
+            sys.exit(31)
     dictOfIntructions = sorted(dictOfIntructions.items(), key=lambda x: x[0])
     for order, val in dictOfIntructions:
         if order < 0:
             sys.exit(32)
+    if (tree.tail and tree.tail.strip() != "") or \
+            (tree.text and tree.text.strip() != ""):
+        sys.exit(31)
+
     return dictOfIntructions
 
 
