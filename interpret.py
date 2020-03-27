@@ -1,3 +1,11 @@
+"""
+Project: Interpret of XML code representation
+Author: David Oravec (xorave05)
+File: interpret.py
+Description:
+    Loads XML code, transfomrs it and executes code IPPcode20 which is based on python
+"""
+
 import xml.etree.ElementTree as ET
 import argparse
 import sys
