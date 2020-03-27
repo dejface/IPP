@@ -338,7 +338,10 @@ def defvar(argument):
     pref, suf = editVar(argument[1][0][1])
     if pref not in hashTable:
         sys.exit(55)
-    hashTable[pref][suf] = None
+    if suf in hashTable[pref]:
+        sys.exit(52)
+    else:
+        hashTable[pref][suf] = None
 
 
 # CALL ⟨label⟩
@@ -374,6 +377,9 @@ def add(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
 
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
+
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
         argument[1][1] = var
@@ -405,12 +411,20 @@ def add(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # SUB ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def sub(argument):
 
     if (len(argument[1])) != 3:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -443,11 +457,19 @@ def sub(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # MUL ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def mul(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -481,11 +503,19 @@ def mul(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # IDIV ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def idiv(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -504,20 +534,27 @@ def idiv(argument):
     if code != 0:
         sys.exit(code)
 
+    if int(argument[1][2][1]) == 0:
+        sys.exit(57)
     try:
-        if int(argument[1][2][1]) == 0:
-            sys.exit(57)
-
         result = int(argument[1][1][1]) // int(argument[1][2][1])
         hashTable[destPrefix][destSuffix] = ('int', str(result))
     except:
         sys.exit(32)
+
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
 
 
 # DIV ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def div(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -535,15 +572,20 @@ def div(argument):
     code = inTable(destPrefix, destSuffix)
     if code != 0:
         sys.exit(code)
-    try:
-        if float.fromhex(argument[1][2][1]) == 0:
-            sys.exit(57)
+    if float.fromhex(argument[1][2][1]) == 0:
+        sys.exit(57)
 
+    try:
         result = float(float.fromhex(argument[1][1][1])) / float(float.fromhex(argument[1][2][1]))
         result = result.hex()
         hashTable[destPrefix][destSuffix] = ('float', str(result))
     except:
         sys.exit(32)
+
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
 
 
 # LT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -553,6 +595,9 @@ def lt(argument):
 
     if argument[1][0][0] != 'var':
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -593,6 +638,11 @@ def lt(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # GT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def gt(argument):
@@ -601,6 +651,9 @@ def gt(argument):
 
     if argument[1][0][0] != 'var':
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -641,6 +694,11 @@ def gt(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # EQ ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def eq(argument):
@@ -649,6 +707,9 @@ def eq(argument):
 
     if argument[1][0][0] != 'var':
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -694,6 +755,11 @@ def eq(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # AND ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def andInstr(argument):
@@ -702,6 +768,9 @@ def andInstr(argument):
 
     if argument[1][0][0] != 'var':
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -723,6 +792,11 @@ def andInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'false')
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # OR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def orInstr(argument):
@@ -731,6 +805,9 @@ def orInstr(argument):
 
     if argument[1][0][0] != 'var':
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -752,6 +829,11 @@ def orInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'false')
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # NOT ⟨var⟩ ⟨symb1⟩
 def notInstr(argument):
@@ -760,6 +842,8 @@ def notInstr(argument):
 
     if argument[1][0][0] != 'var':
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -778,11 +862,16 @@ def notInstr(argument):
     else:
         hashTable[destPrefix][destSuffix] = ('bool', 'true')
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+
 
 # INT2CHAR ⟨var⟩ ⟨symb1⟩
 def int2char(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -804,11 +893,17 @@ def int2char(argument):
     except:
         sys.exit(58)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+
 
 # STRI2INT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def stri2int(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -842,11 +937,18 @@ def stri2int(argument):
     except:
         sys.exit(58)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # INT2FLOAT ⟨var⟩ ⟨symb⟩
 def int2float(argument):
     if len(argument[1]) != 2:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -869,11 +971,16 @@ def int2float(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+
 
 # FLOAT2INT ⟨var⟩ ⟨symb⟩
 def float2int(argument):
     if len(argument[1]) != 2:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -895,6 +1002,9 @@ def float2int(argument):
         hashTable[destPrefix][destSuffix] = ('int', int(result))
     except:
         sys.exit(32)
+
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
 
 
 # READ ⟨var⟩ ⟨type⟩
@@ -962,6 +1072,8 @@ def write(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
 
+    tempArg1 = argument[1][0]
+
     if argument[1][0][0] == 'var':
         var = fromTable(argument[1][0][1])
         argument[1][0] = var
@@ -980,11 +1092,17 @@ def write(argument):
         else:
             print(argument[1][0][1], end='')
 
+    if tempArg1 != argument[1][0]:
+        argument[1][0] = tempArg1
+
 
 # CONCAT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def concat(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -1008,11 +1126,18 @@ def concat(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # STRLEN ⟨var⟩ ⟨symb1⟩
 def strlen(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -1034,11 +1159,17 @@ def strlen(argument):
     except:
         sys.exit(32)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+
 
 # GETCHAR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def getchar(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -1069,11 +1200,19 @@ def getchar(argument):
 
     hashTable[destPrefix][destSuffix] = ('string', str(word[int(index)]))
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # SETCHAR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def setchar(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
+
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
 
     if argument[1][1][0] == 'var':
         var = fromTable(argument[1][1][1])
@@ -1111,6 +1250,11 @@ def setchar(argument):
     result = result[:index] + char[0:1] + result[index + 1:]
 
     hashTable[destPrefix][destSuffix] = ('string', str(result))
+
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
 
 
 # TYPE ⟨var⟩ ⟨symb⟩
@@ -1219,11 +1363,14 @@ def jumpifeq(argument):
     if argument[1][0][1] not in hashTable["label"]:
         sys.exit(52)
 
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
+
     if argument[1][1][0] == 'var':
-        var = fromTable(argument[1][0][1])
+        var = fromTable(argument[1][1][1])
         argument[1][1] = var
     if argument[1][2][0] == 'var':
-        var = fromTable(argument[1][0][1])
+        var = fromTable(argument[1][2][1])
         argument[1][2] = var
 
     if str(argument[1][1][0]) == str(argument[1][2][0]):
@@ -1235,6 +1382,11 @@ def jumpifeq(argument):
                 instrPointer = hashTable["label"][argument[1][0][1]]
     else:
         sys.exit(53)
+
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
 
 
 # JUMPIFNEQ ⟨label⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -1249,15 +1401,18 @@ def jumpifneq(argument):
     if argument[1][0][1] not in hashTable["label"]:
         sys.exit(52)
 
+    tempArg1 = argument[1][1]
+    tempArg2 = argument[1][2]
+
     if argument[1][1][0] == 'var':
-        var = fromTable(argument[1][0][1])
+        var = fromTable(argument[1][1][1])
         argument[1][1] = var
     if argument[1][2][0] == 'var':
-        var = fromTable(argument[1][0][1])
+        var = fromTable(argument[1][2][1])
         argument[1][2] = var
 
     if str(argument[1][1][0]) == str(argument[1][2][0]):
-        if str(argument[1][1][1]) != str(argument[1][2][1]):
+        if argument[1][1][1] != argument[1][2][1]:
             instrPointer = hashTable["label"][argument[1][0][1]]
     elif str(argument[1][1][0]) == 'nil' or str(argument[1][2][0]) == 'nil':
         if str(argument[1][1][0]) == 'nil' and str(argument[1][2][0]) == 'nil':
@@ -1270,11 +1425,18 @@ def jumpifneq(argument):
     else:
         sys.exit(53)
 
+    if tempArg1 != argument[1][1]:
+        argument[1][1] = tempArg1
+    if tempArg2 != argument[1][2]:
+        argument[1][2] = tempArg2
+
 
 # DPRINT ⟨symb⟩
 def dprint(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
+
+    tempArg1 = argument[1][0]
 
     if argument[1][0][0] == 'var':
         var = fromTable(argument[1][0][1])
@@ -1282,11 +1444,16 @@ def dprint(argument):
 
     sys.stderr.write(str(argument[1][0][1]))
 
+    if tempArg1 != argument[1][0]:
+        argument[1][0] = tempArg1
+
 
 # PUSHS ⟨symb⟩
 def pushs(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
+
+    tempArg1 = argument[1][0]
 
     if argument[1][0][0] == 'var':
         pref, suf = editVar(argument[1][0][1])
@@ -1300,6 +1467,9 @@ def pushs(argument):
         sys.exit(53)
 
     stackOfVars.append((argument[1][0][0], argument[1][0][1]))
+
+    if tempArg1 != argument[1][0]:
+        argument[1][0] = tempArg1
 
 
 # POPS ⟨var⟩
