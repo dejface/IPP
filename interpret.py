@@ -2,13 +2,19 @@ import xml.etree.ElementTree as ET
 import argparse
 import sys
 
+# GLOBAL variables
 hashTable = {}
 stackOfFrames = list()
 stackOfVars = list()
 stackOfCalls = list()
 instrPointer, varCounter, instrCounter = 0, 0, 0
+statsFile = None
 
-
+"""
+    function for handling arguments
+    returns sourceFile (if defined), inputFile (if defined), 
+    statsFile (if defined) or exits with proper exit code
+"""
 def arg_handler():
     argsparser = argparse.ArgumentParser(description="Loads XML code, transforms it to IPPcode20 and executes it")
     argsparser.add_argument("--source", nargs=1, help="Input file with XML code")
@@ -18,7 +24,7 @@ def arg_handler():
     argsparser.add_argument("--vars", action="store_true", help="Number of maximum initialized vars, requires --stats")
 
     args = argsparser.parse_args()
-
+    # there has to be at least one of them defined
     if args.input is None and args.source is None:
         sys.exit(10)
 
@@ -34,8 +40,7 @@ def arg_handler():
             sourceFile = open(args.source[0], "r")
     except:
         sys.exit(11)
-
-    statsFile = None
+    global statsFile
     try:
         if args.stats is not None:
             statsFile = open(args.stats[0], "w")
@@ -48,6 +53,11 @@ def arg_handler():
     return sourceFile, inputFile, statsFile
 
 
+"""
+   function for parsing source XML file
+   returns dict of instruction which contains:
+   order, instruction, params
+"""
 def readSource(sourceFile):
     dictOfIntructions = dict()
     okCheck = False
@@ -66,44 +76,51 @@ def readSource(sourceFile):
             sys.exit(32)
     if okCheck is False:
         sys.exit(32)
-
-    for instruction in tree:
-        if len(instruction.attrib) != 2:
-            sys.exit(32)
-        order = instruction.attrib["order"]
-        opcode = instruction.attrib["opcode"]
-
-        if opcode == "none" or order is None:
-            sys.exit(32)
-
-        array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]
-        types = ["string", "int", "var", "type", "nil", "bool", "label", "float"]
-        instructions = dict()
-        instructions[int(order)] = list()
-        args = list()
-        for i in range(len(instruction)):
-            xmlArg = instruction.find("arg" + str(i + 1))
-            if xmlArg.attrib["type"] not in types:
-                exit(53)
-            if len(xmlArg.attrib) != 1:
+    try:
+        for instruction in tree:
+            if len(instruction.attrib) != 2:
                 sys.exit(32)
-            if xmlArg.attrib["type"] == 'string' and xmlArg.text is not None:
-                if any(idx in xmlArg.text for idx in array):
-                    sys.exit(32)
-                xmlArg.text = changeString(xmlArg.text)
-            if xmlArg.attrib["type"] == 'string' and xmlArg.text is None:
-                arg = ('string', "")
-            else:
-                arg = (xmlArg.attrib["type"], xmlArg.text)
-            args.append(arg)
-        instructions[int(order)].append(opcode)
-        instructions[int(order)].append(args)
-        dictOfIntructions.update(instructions)
-    dictOfIntructions = sorted(dictOfIntructions.items(), key=lambda x: x[0])
+            order = instruction.attrib["order"]
+            opcode = instruction.attrib["opcode"]
 
+            if opcode == "none" or order is None:
+                sys.exit(32)
+
+            array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]    # these are forbidden
+            types = ["string", "int", "var", "type", "nil", "bool", "label", "float"]
+            instructions = dict()
+            instructions[int(order)] = list()
+            args = list()
+            for i in range(len(instruction)):
+                xmlArg = instruction.find("arg" + str(i + 1))
+                if xmlArg.attrib["type"] not in types:
+                    exit(53)
+                if len(xmlArg.attrib) != 1:
+                    sys.exit(32)
+                if xmlArg.attrib["type"] == 'string' and xmlArg.text is not None:
+                    if any(idx in xmlArg.text for idx in array):
+                        sys.exit(32)
+                    xmlArg.text = changeString(xmlArg.text)
+                if xmlArg.attrib["type"] == 'string' and xmlArg.text is None:
+                    arg = ('string', "")
+                else:
+                    arg = (xmlArg.attrib["type"], xmlArg.text)
+                args.append(arg)
+            instructions[int(order)].append(opcode)
+            instructions[int(order)].append(args)
+            dictOfIntructions.update(instructions)
+    except:
+        sys.exit(31)
+    dictOfIntructions = sorted(dictOfIntructions.items(), key=lambda x: x[0])
+    for order, val in dictOfIntructions:
+        if order < 0:
+            sys.exit(32)
     return dictOfIntructions
 
 
+"""
+    returns True if var is valid operand, otherwise False
+"""
 def checkSymb(var):
     if var == 'string' or var == 'int' or var == 'bool' or var == 'nil'\
             or var == 'float':
@@ -112,9 +129,12 @@ def checkSymb(var):
         return False
 
 
+"""
+    edit var and returns prefix and sufix to hashTable
+"""
 def editVar(var):
     if var.find("@") == -1:
-        sys.exit(53)
+        sys.exit(32)
     else:
         prefix = var[:2]
         suffix = var[3:]
@@ -122,6 +142,9 @@ def editVar(var):
     return prefix, suffix
 
 
+"""
+    removes escape sequences from strings
+"""
 def changeString(str):
     for index, change in enumerate(str.split("\\")):
         if index == 0:
@@ -131,6 +154,9 @@ def changeString(str):
     return str
 
 
+"""
+    checks if operand is correct
+"""
 def checkErr(var, expected1, expected2, *symb):
     if var != 'var':
         return 32
@@ -147,6 +173,9 @@ def checkErr(var, expected1, expected2, *symb):
     return 0
 
 
+"""
+    looks if prefix and suffix are initialized in hashTable
+"""
 def inTable(pref, suf):
     if pref not in hashTable:
         return 55
@@ -155,6 +184,9 @@ def inTable(pref, suf):
     return 0
 
 
+"""
+    gets value from var which is in hashTable
+"""
 def fromTable(arg):
     pref, suf = editVar(arg)
     code = inTable(pref, suf)
@@ -167,6 +199,9 @@ def fromTable(arg):
     return result
 
 
+"""
+    function which imitates switch like in C
+"""
 def mySwitch(argument):
     switcher = {"MOVE": move,
                 "CREATEFRAME": createframe,
@@ -217,11 +252,18 @@ def mySwitch(argument):
                 "STRI2INTS": stri2ints,
                 "JUMPIFEQS": jumpifeqs,
                 "JUMPIFNEQS": jumpifneqs,
-                "CLEARS": clears}
+                "CLEARS": clears,
+                "DIV": div,
+                "INT2FLOAT": int2float,
+                "FLOAT2INT": float2int,
+                "DIVS": divs,
+                "INT2FLOATS": int2floats,
+                "FLOAT2INTS": float2ints}
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
 
+# MOVE ⟨var⟩ ⟨symb⟩
 def move(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
@@ -249,15 +291,14 @@ def move(argument):
     hashTable[destPrefix][destSuffix] = var
 
 
-# creates a temporary frame TF
+# CREATEFRAME
 def createframe(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
     hashTable["TF"] = {}
 
 
-# pushes TF to stackOfFrames which means it will be covered by LF,
-# if TF doeasn't exists, error will be raised
+# PUSHFRAME
 def pushframe(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
@@ -268,7 +309,7 @@ def pushframe(argument):
     hashTable["LF"] = hashTable.pop("TF")  # frame TF is replaced by LF
 
 
-# pops a frame TODO
+# POPFRAME
 def popframe(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
@@ -279,7 +320,7 @@ def popframe(argument):
         hashTable["LF"] = stackOfFrames.pop()
 
 
-# defines variable var in a specific frame
+# DEFVAR ⟨var⟩
 def defvar(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -292,6 +333,7 @@ def defvar(argument):
     hashTable[pref][suf] = None
 
 
+# CALL ⟨label⟩
 def call(argument):
     global instrPointer
     if (len(argument[1])) != 1:
@@ -307,6 +349,7 @@ def call(argument):
     instrPointer = hashTable["label"][argument[1][0][1]]
 
 
+# RETURN
 def returnInstr(argument):
     global instrPointer
     if len(argument[1]) > 0:
@@ -343,13 +386,16 @@ def add(argument):
     if code != 0:
         sys.exit(code)
 
-    if exp == 'float':
-        result = float(float.fromhex(argument[1][1][1])) + float(float.fromhex(argument[1][2][1]))
-        result = float.hex(result)
-        hashTable[destPrefix][destSuffix] = ("float", str(result))
-    else:
-        result = int(argument[1][1][1]) + int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ("int", str(result))
+    try:
+        if exp == 'float':
+            result = float(float.fromhex(argument[1][1][1])) + float(float.fromhex(argument[1][2][1]))
+            result = float.hex(result)
+            hashTable[destPrefix][destSuffix] = ('float', str(result))
+        else:
+            result = int(argument[1][1][1]) + int(argument[1][2][1])
+            hashTable[destPrefix][destSuffix] = ('int', str(result))
+    except:
+        sys.exit(32)
 
 
 # SUB ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -378,14 +424,16 @@ def sub(argument):
     code = inTable(destPrefix, destSuffix)
     if code != 0:
         sys.exit(code)
-
-    if exp == 'float':
-        result = float(float.fromhex(argument[1][1][1])) - float(float.fromhex(argument[1][2][1]))
-        result = float.hex(result)
-        hashTable[destPrefix][destSuffix] = ("float", str(result))
-    else:
-        result = int(argument[1][1][1]) - int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ("int", str(result))
+    try:
+        if exp == 'float':
+            result = float(float.fromhex(argument[1][1][1])) - float(float.fromhex(argument[1][2][1]))
+            result = float.hex(result)
+            hashTable[destPrefix][destSuffix] = ('float', str(result))
+        else:
+            result = int(argument[1][1][1]) - int(argument[1][2][1])
+            hashTable[destPrefix][destSuffix] = ('int', str(result))
+    except:
+        sys.exit(32)
 
 
 # MUL ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -414,13 +462,16 @@ def mul(argument):
     if code != 0:
         sys.exit(code)
 
-    if exp == 'float':
-        result = float(float.fromhex(argument[1][1][1])) * float(float.fromhex(argument[1][2][1]))
-        result = float.hex(result)
-        hashTable[destPrefix][destSuffix] = ("float", str(result))
-    else:
-        result = int(argument[1][1][1]) * int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ("int", str(result))
+    try:
+        if exp == 'float':
+            result = float(float.fromhex(argument[1][1][1])) * float(float.fromhex(argument[1][2][1]))
+            result = float.hex(result)
+            hashTable[destPrefix][destSuffix] = ('float', str(result))
+        else:
+            result = int(argument[1][1][1]) * int(argument[1][2][1])
+            hashTable[destPrefix][destSuffix] = ('int', str(result))
+    except:
+        sys.exit(32)
 
 
 # IDIV ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -445,11 +496,46 @@ def idiv(argument):
     if code != 0:
         sys.exit(code)
 
-    if int(argument[1][2][1]) == 0:
-        sys.exit(57)
-    result = int(argument[1][1][1]) // int(argument[1][2][1])
+    try:
+        if int(argument[1][2][1]) == 0:
+            sys.exit(57)
 
-    hashTable[destPrefix][destSuffix] = ("int", str(result))
+        result = int(argument[1][1][1]) // int(argument[1][2][1])
+        hashTable[destPrefix][destSuffix] = ('int', str(result))
+    except:
+        sys.exit(32)
+
+
+# DIV ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
+def div(argument):
+    if (len(argument[1])) != 3:
+        sys.exit(32)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+    if argument[1][2][0] == 'var':
+        var = fromTable(argument[1][2][1])
+        argument[1][2] = var
+
+    exp = 'float'
+    code = checkErr(argument[1][0][0], exp, exp, argument[1][1][0], argument[1][2][0])
+    if code != 0:
+        sys.exit(code)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+    try:
+        if float.fromhex(argument[1][2][1]) == 0:
+            sys.exit(57)
+
+        result = float(float.fromhex(argument[1][1][1])) / float(float.fromhex(argument[1][2][1]))
+        result = result.hex()
+        hashTable[destPrefix][destSuffix] = ('float', str(result))
+    except:
+        sys.exit(32)
 
 
 # LT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -481,19 +567,23 @@ def lt(argument):
     if code != 0:
         sys.exit(code)
 
-    if argument[1][1][0] == 'int':
-        result = int(argument[1][1][1]) < int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
-    elif argument[1][1][0] == 'string':
-        result = argument[1][1][1] < argument[1][2][1]
-        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
-    elif argument[1][1][0] == 'bool':
-        if argument[1][1][1] == 'false' and argument[1][2][1] == 'true':
-            hashTable[destPrefix][destSuffix] = ('bool', 'true')
-        else:
-            hashTable[destPrefix][destSuffix] = ('bool', 'false')
-    else:
-        sys.exit(53)
+    try:
+        if argument[1][1][0] == 'int':
+            result = int(argument[1][1][1]) < int(argument[1][2][1])
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+        elif argument[1][1][0] == 'string':
+            result = argument[1][1][1] < argument[1][2][1]
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+        elif argument[1][1][0] == 'bool':
+            if argument[1][1][1] == 'false' and argument[1][2][1] == 'true':
+                hashTable[destPrefix][destSuffix] = ('bool', 'true')
+            else:
+                hashTable[destPrefix][destSuffix] = ('bool', 'false')
+        elif argument[1][1][0] == 'float':
+            result = float(float.fromhex(argument[1][1][1])) < float(float.fromhex(argument[1][2][1]))
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+    except:
+        sys.exit(32)
 
 
 # GT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -525,19 +615,23 @@ def gt(argument):
     if code != 0:
         sys.exit(code)
 
-    if argument[1][1][0] == 'int':
-        result = int(argument[1][1][1]) > int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
-    elif argument[1][1][0] == 'string':
-        result = argument[1][1][1] > argument[1][2][1]
-        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
-    elif argument[1][1][0] == 'bool':
-        if argument[1][1][1] == 'true' and argument[1][2][1] == 'false':
-            hashTable[destPrefix][destSuffix] = ('bool', 'true')
-        else:
-            hashTable[destPrefix][destSuffix] = ('bool', 'false')
-    else:
-        sys.exit(53)
+    try:
+        if argument[1][1][0] == 'int':
+            result = int(argument[1][1][1]) > int(argument[1][2][1])
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+        elif argument[1][1][0] == 'string':
+            result = argument[1][1][1] > argument[1][2][1]
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+        elif argument[1][1][0] == 'bool':
+            if argument[1][1][1] == 'true' and argument[1][2][1] == 'false':
+                hashTable[destPrefix][destSuffix] = ('bool', 'true')
+            else:
+                hashTable[destPrefix][destSuffix] = ('bool', 'false')
+        elif argument[1][1][0] == 'float':
+            result = float(float.fromhex(argument[1][1][1])) > float(float.fromhex(argument[1][2][1]))
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+    except:
+        sys.exit(32)
 
 
 # EQ ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -573,20 +667,24 @@ def eq(argument):
     if argument[1][1][0] != argument[1][2][0]:
         sys.exit(53)
 
-    if argument[1][1][0] == 'int':
-        result = int(argument[1][1][1]) == int(argument[1][2][1])
-        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
-    elif argument[1][1][0] == 'string':
-        result = argument[1][1][1] == argument[1][2][1]
-        hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
-    elif argument[1][1][0] == 'bool':
-        if argument[1][1][1] == 'true' and argument[1][2][1] == 'true' or \
-                argument[1][1][1] == 'false' and argument[1][2][1] == 'false':
-            hashTable[destPrefix][destSuffix] = ('bool', 'true')
-        else:
-            hashTable[destPrefix][destSuffix] = ('bool', 'false')
-    else:
-        sys.exit(53)
+    try:
+        if argument[1][1][0] == 'int':
+            result = int(argument[1][1][1]) == int(argument[1][2][1])
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+        elif argument[1][1][0] == 'string':
+            result = argument[1][1][1] == argument[1][2][1]
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+        elif argument[1][1][0] == 'bool':
+            if argument[1][1][1] == 'true' and argument[1][2][1] == 'true' or \
+                    argument[1][1][1] == 'false' and argument[1][2][1] == 'false':
+                hashTable[destPrefix][destSuffix] = ('bool', 'true')
+            else:
+                hashTable[destPrefix][destSuffix] = ('bool', 'false')
+        elif argument[1][1][0] == 'float':
+            result = float(float.fromhex(argument[1][1][1])) == float(float.fromhex(argument[1][2][1]))
+            hashTable[destPrefix][destSuffix] = ('bool', str(result).lower())
+    except:
+        sys.exit(32)
 
 
 # AND ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -721,9 +819,12 @@ def stri2int(argument):
     code = inTable(destPrefix, destSuffix)
     if code != 0:
         sys.exit(code)
+    try:
+        word = argument[1][1][1]
+        index = int(argument[1][2][1])
+    except:
+        sys.exit(32)
 
-    word = argument[1][1][1]
-    index = argument[1][2][1]
     if int(index) < 0:
         sys.exit(58)
 
@@ -734,6 +835,61 @@ def stri2int(argument):
         sys.exit(58)
 
 
+# INT2FLOAT ⟨var⟩ ⟨symb⟩
+def int2float(argument):
+    if len(argument[1]) != 2:
+        sys.exit(32)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+
+    exp = 'int'
+    exp2 = None
+    code = checkErr(argument[1][0][0], exp, exp2, argument[1][1][0])
+    if code != 0:
+        sys.exit(code)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
+    try:
+        result = float(int(argument[1][1][1])).hex()
+        hashTable[destPrefix][destSuffix] = ('float', result)
+    except:
+        sys.exit(32)
+
+
+# FLOAT2INT ⟨var⟩ ⟨symb⟩
+def float2int(argument):
+    if len(argument[1]) != 2:
+        sys.exit(32)
+
+    if argument[1][1][0] == 'var':
+        var = fromTable(argument[1][1][1])
+        argument[1][1] = var
+
+    exp = 'float'
+    exp2 = None
+    code = checkErr(argument[1][0][0], exp, exp2, argument[1][1][0])
+    if code != 0:
+        sys.exit(code)
+
+    destPrefix, destSuffix = editVar(argument[1][0][1])
+    code = inTable(destPrefix, destSuffix)
+    if code != 0:
+        sys.exit(code)
+
+    try:
+        result = float.fromhex(argument[1][1][1])
+        hashTable[destPrefix][destSuffix] = ('int', int(result))
+    except:
+        sys.exit(32)
+
+
+# READ ⟨var⟩ ⟨type⟩
 def read(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
@@ -756,7 +912,7 @@ def read(argument):
     except:
         result = ""
 
-    if type == 'int' or type == 'string' or type == 'bool':
+    if type == 'int' or type == 'string' or type == 'bool' or type == 'float':
         if type == 'int':
             if result == "":
                 hashTable[destPrefix][destSuffix] = ('nil', 'nil')
@@ -781,10 +937,19 @@ def read(argument):
                     hashTable[destPrefix][destSuffix] = ('bool', 'false')
                 else:
                     hashTable[destPrefix][destSuffix] = ('bool', 'true')
+        elif type == 'float':
+            if result == "":
+                hashTable[destPrefix][destSuffix] = ('nil', 'nil')
+            else:
+                try:
+                    hashTable[destPrefix][destSuffix] = ('float', str(float.fromhex(result).hex()))
+                except:
+                    hashTable[destPrefix][destSuffix] = ('nil', 'nil')
     else:
         sys.exit(57)
 
 
+# WRITE ⟨symb⟩
 def write(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -799,7 +964,13 @@ def write(argument):
     if argument[1][0][0] == 'nil':
         print("", end='')
     else:
-        print(argument[1][0][1], end='')
+        if argument[1][0][0] == 'float':
+            try:
+                print(str(float.fromhex(argument[1][0][1]).hex()), end='')
+            except:
+                print(float(argument[1][0][1]).hex(), end='')
+        else:
+            print(argument[1][0][1], end='')
 
 
 # CONCAT ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -824,7 +995,10 @@ def concat(argument):
     if code != 0:
         sys.exit(code)
 
-    hashTable[destPrefix][destSuffix] = ('string', str(argument[1][1][1] + argument[1][2][1]))
+    try:
+        hashTable[destPrefix][destSuffix] = ('string', str(argument[1][1][1] + argument[1][2][1]))
+    except:
+        sys.exit(32)
 
 
 # STRLEN ⟨var⟩ ⟨symb1⟩
@@ -847,7 +1021,10 @@ def strlen(argument):
     if code != 0:
         sys.exit(code)
 
-    hashTable[destPrefix][destSuffix] = ('int', int(len(argument[1][1][1])))
+    try:
+        hashTable[destPrefix][destSuffix] = ('int', int(len(argument[1][1][1])))
+    except:
+        sys.exit(32)
 
 
 # GETCHAR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
@@ -873,14 +1050,19 @@ def getchar(argument):
     if code != 0:
         sys.exit(code)
 
-    word = argument[1][1][1]
-    index = argument[1][2][1]
+    try:
+        word = argument[1][1][1]
+        index = int(argument[1][2][1])
+    except:
+        sys.exit(32)
+
     if int(index) < 0 or int(index) > len(word) - 1:
         sys.exit(58)
 
     hashTable[destPrefix][destSuffix] = ('string', str(word[int(index)]))
 
 
+# SETCHAR ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def setchar(argument):
     if (len(argument[1])) != 3:
         sys.exit(32)
@@ -906,8 +1088,12 @@ def setchar(argument):
     word = fromTable(argument[1][0][1])
     if word[0] != 'string':
         sys.exit(53)
-    index = int(argument[1][1][1])
-    char = argument[1][2][1]
+    try:
+        index = int(argument[1][1][1])
+        char = argument[1][2][1]
+    except:
+        sys.exit(32)
+
     if char == "":
         sys.exit(58)
     if int(index) < 0 or int(index) > len(word[1]) - 1:
@@ -919,6 +1105,7 @@ def setchar(argument):
     hashTable[destPrefix][destSuffix] = ('string', str(result))
 
 
+# TYPE ⟨var⟩ ⟨symb⟩
 def typeInstr(argument):
     if (len(argument[1])) != 2:
         sys.exit(32)
@@ -950,7 +1137,9 @@ def typeInstr(argument):
     hashTable[destPrefix][destSuffix] = ('string', str(result))
 
 
+# EXIT ⟨symb⟩
 def exitInstr(argument):
+    global statsFile
     if (len(argument[1])) != 1:
         sys.exit(32)
 
@@ -962,11 +1151,21 @@ def exitInstr(argument):
         sys.exit(53)
 
     if 0 <= int(argument[1][0][1]) <= 49:
+        # if stats are included we have to write it out
+        if statsFile is not None:
+            for argv in sys.argv:
+                if argv == '--insts':
+                    statsFile.write(str(instrCounter) + '\n')
+                if argv == '--vars':
+                    statsFile.write(str(varCounter) + '\n')
+            statsFile.close()
         sys.exit(int(argument[1][0][1]))
     else:
         sys.exit(57)
 
 
+# this functions creates label before the interpretation of code
+# LABEL ⟨label⟩
 def createLabel(argument):
     global instrPointer
     if (len(argument[1][1])) != 1:
@@ -980,10 +1179,12 @@ def createLabel(argument):
     hashTable["label"][argument[1][1][0][1]] = argument[0] - 1
 
 
+# pass because of createLabel
 def label(argument):
     pass
 
 
+# JUMP ⟨label⟩
 def jump(argument):
     global instrPointer
     if len(argument[1]) != 1:
@@ -998,6 +1199,7 @@ def jump(argument):
     instrPointer = hashTable["label"][argument[1][0][1]]
 
 
+# JUMPIFEQ ⟨label⟩ ⟨symb1⟩ ⟨symb2⟩
 def jumpifeq(argument):
     global instrPointer
     if len(argument[1]) != 3:
@@ -1027,6 +1229,7 @@ def jumpifeq(argument):
         sys.exit(53)
 
 
+# JUMPIFNEQ ⟨label⟩ ⟨symb1⟩ ⟨symb2⟩
 def jumpifneq(argument):
     global instrPointer
     if len(argument[1]) != 3:
@@ -1060,6 +1263,7 @@ def jumpifneq(argument):
         sys.exit(53)
 
 
+# DPRINT ⟨symb⟩
 def dprint(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -1071,6 +1275,7 @@ def dprint(argument):
     sys.stderr.write(str(argument[1][0][1]))
 
 
+# PUSHS ⟨symb⟩
 def pushs(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -1089,6 +1294,7 @@ def pushs(argument):
     stackOfVars.append((argument[1][0][0], argument[1][0][1]))
 
 
+# POPS ⟨var⟩
 def pops(argument):
     if (len(argument[1])) != 1:
         sys.exit(32)
@@ -1107,6 +1313,7 @@ def pops(argument):
         sys.exit(56)
 
 
+# BREAK
 def breakInstr(argument):
     if (len(argument[1])) > 0:
         sys.exit(32)
@@ -1145,11 +1352,20 @@ def adds(argument):
         var = fromTable(var1[1])
         var1[0] = var
 
-    if var2[0] != 'int' or var1[0] != 'int':
+    if (var2[0] != 'int' or var1[0] != 'int') and \
+            (var2[0] != 'float' or var1[0] != 'float'):
         sys.exit(53)
 
-    result = int(var1[1]) + int(var2[1])
-    stackOfVars.append(('int', str(result)))
+    try:
+        if var1[0] == 'int':
+            result = int(var1[1]) + int(var2[1])
+            stackOfVars.append(('int', str(result)))
+        else:
+            result = float(float.fromhex(var1[1]) + float(float.fromhex(var2[1])))
+            result = float.hex(result)
+            stackOfVars.append(('float', str(result)))
+    except:
+        sys.exit(32)
 
 
 def subs(argument):
@@ -1169,11 +1385,20 @@ def subs(argument):
         var = fromTable(var1[1])
         var1[0] = var
 
-    if var2[0] != 'int' or var1[0] != 'int':
+    if (var2[0] != 'int' or var1[0] != 'int') and \
+            (var2[0] != 'float' or var1[0] != 'float'):
         sys.exit(53)
 
-    result = int(var1[1]) - int(var2[1])
-    stackOfVars.append(('int', str(result)))
+    try:
+        if var1[0] == 'int':
+            result = int(var1[1]) - int(var2[1])
+            stackOfVars.append(('int', str(result)))
+        else:
+            result = float(float.fromhex(var1[1]) - float(float.fromhex(var2[1])))
+            result = float.hex(result)
+            stackOfVars.append(('float', str(result)))
+    except:
+        sys.exit(32)
 
 
 def muls(argument):
@@ -1193,11 +1418,20 @@ def muls(argument):
         var = fromTable(var1[1])
         var1[0] = var
 
-    if var2[0] != 'int' or var1[0] != 'int':
+    if (var2[0] != 'int' or var1[0] != 'int') and \
+            (var2[0] != 'float' or var1[0] != 'float'):
         sys.exit(53)
 
-    result = int(var1[1]) * int(var2[1])
-    stackOfVars.append(('int', str(result)))
+    try:
+        if var1[0] == 'int':
+            result = int(var1[1]) * int(var2[1])
+            stackOfVars.append(('int', str(result)))
+        else:
+            result = float(float.fromhex(var1[1]) * float(float.fromhex(var2[1])))
+            result = float.hex(result)
+            stackOfVars.append(('float', str(result)))
+    except:
+        sys.exit(32)
 
 
 def idivs(argument):
@@ -1223,8 +1457,42 @@ def idivs(argument):
     if int(var2[1]) == 0:
         sys.exit(57)
 
-    result = int(var1[1]) // int(var2[1])
-    stackOfVars.append(('int', str(result)))
+    try:
+        result = int(var1[1]) // int(var2[1])
+        stackOfVars.append(('int', str(result)))
+    except:
+        sys.exit(32)
+
+
+def divs(argument):
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    try:
+        var2 = stackOfVars.pop()
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var2[0] == 'var':
+        var = fromTable(var2[1])
+        var2[0] = var
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var2[0] != 'float' or var1[0] != 'float':
+        sys.exit(53)
+
+    if float.fromhex(var2[1]) == 0:
+        sys.exit(57)
+
+    try:
+        result = float(float.fromhex(var1[1])) / float(float.fromhex(var2[1]))
+        result = result.hex()
+        stackOfVars.append(('float', str(result)))
+    except:
+        sys.exit(32)
 
 
 def lts(argument):
@@ -1250,19 +1518,23 @@ def lts(argument):
     if var1[0] == 'nil' or var2[0] == 'nil':
         sys.exit(53)
 
-    if var1[0] == 'int' and var2[0] == 'int':
-        result = int(var1[1]) < int(var2[1])
-        stackOfVars.append(('bool', str(result).lower()))
-    elif var1[0] == 'string' and var2[0] == 'string':
-        result = str(var1[1]) < str(var2[1])
-        stackOfVars.append(('bool', str(result).lower()))
-    elif var1[0] == 'bool' and var2[0] == 'bool':
-        if var1[1] == 'false' and var2[1] == 'true':
-            stackOfVars.append(('bool', 'true'))
-        else:
-            stackOfVars.append(('bool', 'false'))
-    else:
-        sys.exit(53)
+    try:
+        if var1[0] == 'int' and var2[0] == 'int':
+            result = int(var1[1]) < int(var2[1])
+            stackOfVars.append(('bool', str(result).lower()))
+        elif var1[0] == 'string' and var2[0] == 'string':
+            result = str(var1[1]) < str(var2[1])
+            stackOfVars.append(('bool', str(result).lower()))
+        elif var1[0] == 'bool' and var2[0] == 'bool':
+            if var1[1] == 'false' and var2[1] == 'true':
+                stackOfVars.append(('bool', 'true'))
+            else:
+                stackOfVars.append(('bool', 'false'))
+        elif var1[0] == 'float' and var2[0] == 'float':
+            result = float(float.fromhex(var1[1])) < float(float.fromhex(var2[1]))
+            stackOfVars.append(('bool', str(result).lower()))
+    except:
+        sys.exit(32)
 
 
 def gts(argument):
@@ -1288,19 +1560,23 @@ def gts(argument):
     if var1[0] == 'nil' or var2[0] == 'nil':
         sys.exit(53)
 
-    if var1[0] == 'int' and var2[0] == 'int':
-        result = int(var1[1]) > int(var2[1])
-        stackOfVars.append(('bool', str(result).lower()))
-    elif var1[0] == 'string' and var2[0] == 'string':
-        result = str(var1[1]) > str(var2[1])
-        stackOfVars.append(('bool', str(result).lower()))
-    elif var1[0] == 'bool' and var2[0] == 'bool':
-        if var1[1] == 'true' and var2[1] == 'false':
-            stackOfVars.append(('bool', 'true'))
-        else:
-            stackOfVars.append(('bool', 'false'))
-    else:
-        sys.exit(53)
+    try:
+        if var1[0] == 'int' and var2[0] == 'int':
+            result = int(var1[1]) > int(var2[1])
+            stackOfVars.append(('bool', str(result).lower()))
+        elif var1[0] == 'string' and var2[0] == 'string':
+            result = str(var1[1]) > str(var2[1])
+            stackOfVars.append(('bool', str(result).lower()))
+        elif var1[0] == 'bool' and var2[0] == 'bool':
+            if var1[1] == 'true' and var2[1] == 'false':
+                stackOfVars.append(('bool', 'true'))
+            else:
+                stackOfVars.append(('bool', 'false'))
+        elif var1[0] == 'float' and var2[0] == 'float':
+            result = float(float.fromhex(var1[1])) > float(float.fromhex(var2[1]))
+            stackOfVars.append(('bool', str(result).lower()))
+    except:
+        sys.exit(32)
 
 
 def eqs(argument):
@@ -1329,20 +1605,23 @@ def eqs(argument):
 
     if var1[0] != var2[0]:
         sys.exit(53)
-
-    if var1[0] == 'int' and var2[0] == 'int':
-        result = int(var1[1]) == int(var2[1])
-        stackOfVars.append(('bool', str(result).lower()))
-    elif var1[0] == 'string' and var2[0] == 'string':
-        result = str(var1[1]) == str(var2[1])
-        stackOfVars.append(('bool', str(result).lower()))
-    elif var1[0] == 'bool' and var2[0] == 'bool':
-        if var1[1] == var2[1]:
-            stackOfVars.append(('bool', 'true'))
-        else:
-            stackOfVars.append(('bool', 'false'))
-    else:
-        sys.exit(53)
+    try:
+        if var1[0] == 'int' and var2[0] == 'int':
+            result = int(var1[1]) == int(var2[1])
+            stackOfVars.append(('bool', str(result).lower()))
+        elif var1[0] == 'string' and var2[0] == 'string':
+            result = str(var1[1]) == str(var2[1])
+            stackOfVars.append(('bool', str(result).lower()))
+        elif var1[0] == 'bool' and var2[0] == 'bool':
+            if var1[1] == var2[1]:
+                stackOfVars.append(('bool', 'true'))
+            else:
+                stackOfVars.append(('bool', 'false'))
+        elif var1[0] == 'float' and var2[0] == 'float':
+            result = float(float.fromhex(var1[1])) == float(float.fromhex(var2[1]))
+            stackOfVars.append(('bool', str(result).lower()))
+    except:
+        sys.exit(32)
 
 
 def ands(argument):
@@ -1474,6 +1753,52 @@ def stri2ints(argument):
         sys.exit(58)
 
 
+def int2floats(argument):
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    try:
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] != 'int':
+        sys.exit(53)
+
+    try:
+        result = float(int(var1[1])).hex()
+        stackOfVars.append(('float', result))
+    except:
+        sys.exit(32)
+
+
+def float2ints(argument):
+    if len(argument[1]) > 0:
+        sys.exit(32)
+
+    try:
+        var1 = stackOfVars.pop()
+    except:
+        sys.exit(56)
+
+    if var1[0] == 'var':
+        var = fromTable(var1[1])
+        var1[0] = var
+
+    if var1[0] != 'float':
+        sys.exit(53)
+
+    try:
+        result = float.fromhex(var1[1])
+        stackOfVars.append(('int', int(result)))
+    except:
+        sys.exit(32)
+
+
 def jumpifeqs(argument):
     global instrPointer
     if (len(argument[1])) != 1:
@@ -1599,15 +1924,12 @@ def main():
             varCounter = max(varCounter, counter)
 
     if statsFile is not None:
-        for arg in sys.argv:
-            if arg == '--insts':
+        for argv in sys.argv:
+            if argv == '--insts':
                 statsFile.write(str(instrCounter) + '\n')
-            if arg == '--vars':
+            if argv == '--vars':
                 statsFile.write(str(varCounter) + '\n')
         statsFile.close()
-
-    print(stackOfVars)
-    print(hashTable)
 
 
 if __name__ == "__main__":
