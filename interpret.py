@@ -74,13 +74,10 @@ def readSource(sourceFile):
     except:
         sys.exit(32)
 
-    opt = ['language', 'name', 'description']
     for attrib, item in tree.attrib.items():
         if attrib == "language" and item == "IPPcode20":
             okCheck = True
-        else:
-            sys.exit(32)
-        if attrib not in opt:
+        if attrib != 'language' and attrib != 'name' and attrib != 'description':
             sys.exit(32)
     if okCheck is False:
         sys.exit(32)
@@ -119,7 +116,7 @@ def readSource(sourceFile):
                     raise
         except:
             sys.exit(31)
-        instructions[int(order)].append(opcode)
+        instructions[int(order)].append(str(opcode).upper())
         instructions[int(order)].append(args)
         dictOfIntructions.update(instructions)
         if (instruction.tail and instruction.tail.strip() != "") or\
@@ -348,6 +345,8 @@ def defvar(argument):
     pref, suf = editVar(argument[1][0][1])
     if pref not in hashTable:
         sys.exit(55)
+    if suf in hashTable[pref] and len(hashTable["label"]) != 0:
+        return
     if suf in hashTable[pref]:
         sys.exit(52)
     else:
@@ -1051,7 +1050,7 @@ def read(argument):
                     hashTable[destPrefix][destSuffix] = ('nil', 'nil')
         elif type == 'string':
             if result == "":
-                hashTable[destPrefix][destSuffix] = ('nil', 'nil')
+                hashTable[destPrefix][destSuffix] = ('string', '')
             else:
                 try:
                     hashTable[destPrefix][destSuffix] = ('string', str(result))
