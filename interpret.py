@@ -67,7 +67,7 @@ def arg_handler():
    order, instruction, params
 """
 def readSource(sourceFile):
-    dictOfIntructions = dict()
+    dictOfInstructions = {}
     okCheck = False
     try:
         tree = ET.parse(sourceFile).getroot()
@@ -91,21 +91,24 @@ def readSource(sourceFile):
         if opcode == "none" or order is None:
             sys.exit(32)
 
-        array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]    # these are forbidden
+        array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]  # these are forbidden chars
         types = ["string", "int", "var", "type", "nil", "bool", "label", "float"]
-        instructions = dict()
-        instructions[int(order)] = list()
+        instructions = {int(order): list()}
         args = list()
+        err = list()
         try:
             for i in range(len(instruction)):
                 xmlArg = instruction.find("arg" + str(i + 1))
                 if xmlArg.attrib["type"] not in types:
-                    exit(53)
+                    err.append(53)
+                    raise
                 if len(xmlArg.attrib) != 1:
-                    sys.exit(32)
+                    err.append(32)
+                    raise
                 if xmlArg.attrib["type"] == 'string' and xmlArg.text is not None:
                     if any(idx in xmlArg.text for idx in array):
-                        sys.exit(32)
+                        err.append(32)
+                        raise
                     xmlArg.text = changeString(xmlArg.text)
                 if xmlArg.attrib["type"] == 'string' and xmlArg.text is None:
                     arg = ('string', "")
@@ -115,22 +118,25 @@ def readSource(sourceFile):
                 if xmlArg.tail and xmlArg.tail.strip() != "":
                     raise
         except:
-            sys.exit(31)
+            if len(err) != 0:
+                sys.exit(err.pop(len(err)-1))
+            else:
+                sys.exit(31)
         instructions[int(order)].append(str(opcode).upper())
         instructions[int(order)].append(args)
-        dictOfIntructions.update(instructions)
+        dictOfInstructions.update(instructions)
         if (instruction.tail and instruction.tail.strip() != "") or\
                 (instruction.text and instruction.text.strip() != ""):
             sys.exit(31)
-    dictOfIntructions = sorted(dictOfIntructions.items(), key=lambda x: x[0])
-    for order, val in dictOfIntructions:
+    dictOfInstructions = sorted(dictOfInstructions.items(), key=lambda x: x[0])
+    for order, val in dictOfInstructions:
         if order < 0:
             sys.exit(32)
     if (tree.tail and tree.tail.strip() != "") or \
             (tree.text and tree.text.strip() != ""):
         sys.exit(31)
 
-    return dictOfIntructions
+    return dictOfInstructions
 
 
 """
@@ -151,14 +157,18 @@ def editVar(var):
     if var.find("@") == -1:
         sys.exit(32)
     else:
-        prefix = var[:2]
-        suffix = var[3:]
+        prefix = var[:2]  # first 2 chars = FRAME
+        suffix = var[3:]  # from third index is var
+    # error handling f.e. GFa@var
+    if suffix.find("@"):
+        sys.exit(32)
 
     return prefix, suffix
 
 
 """
     removes escape sequences from strings
+    this function was created with big help of stackoverflow
 """
 def changeString(str):
     for index, change in enumerate(str.split("\\")):
@@ -189,7 +199,7 @@ def checkErr(var, expected1, expected2, *symb):
 
 
 """
-    looks if prefix and suffix are initialized in hashTable
+    checks if prefix and suffix are initialized in hashTable
 """
 def inTable(pref, suf):
     if pref not in hashTable:
@@ -1342,7 +1352,7 @@ def createLabel(argument):
 
 # pass because of createLabel
 def label(argument):
-    pass
+    return
 
 
 # JUMP ⟨label⟩
@@ -2081,12 +2091,17 @@ def main():
             createLabel(instr[i])
 
     while instrPointer < len(instr):
+        instrPointerBefore = instrPointer
         flag = False
         if instr[instrPointer][1][0] == 'RETURN':
+            instrCounter -= 1
             flag = True
         if statsFile is not None:
             instrCounter += 1
         mySwitch(instr[instrPointer])
+
+        if instrPointer != instrPointerBefore:
+            instrCounter += 1
 
         if flag:
             pass
