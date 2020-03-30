@@ -160,7 +160,7 @@ def editVar(var):
         prefix = var[:2]  # first 2 chars = FRAME
         suffix = var[3:]  # from third index is var
     # error handling f.e. GFa@var
-    if suffix.find("@"):
+    if suffix.find("@") != -1:
         sys.exit(32)
 
     return prefix, suffix
