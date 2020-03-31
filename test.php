@@ -6,12 +6,6 @@
  * About: Simple script which automatically tests functionality of
  *        parse.php and interpret.py and generates simple HTML output
  *        with number of tests and results.
- * 
- * NOTE: This script wasn't fully tested with BOTH and INT-ONLY option. 
- *       I've tried to implement complete workflow of test script, but I'm not really
- *       sure if the BOTH and INTERPRET part is functional.
- *       PARSE part is completely tested and it shoul be okay.
- *       Some inconsistencies could appear.
  *
  */
 
@@ -244,12 +238,13 @@ printHTMLHead();
 
 for ($i=0; $i < count($sources); $i++) {
     $output = array();
-
+    // parse-only
     if ($parse && !$interpret){
-        if (isXmlStructureValid($sources[$i]["src"]) == true) {
-            $jumped++;
-            continue;
-        }
+    	if (isXmlStructureValid($sources[$i]["src"]) == true){
+        	$jumped++;
+        	continue;
+    	}
+
         exec("php7.4 $parsePath < ".$sources[$i]["src"],$output["out"],$output["rc"]);
         $output["out"] = implode("\n",$output["out"]);
         if ($output["rc"] == $sources[$i]["rc"]){
@@ -276,16 +271,11 @@ for ($i=0; $i < count($sources); $i++) {
                 printTest($sources[$i]["src"],$JXrc, $sources[$i]["rc"], $success);
             }
         } else {
-            /*if ($output["rc"] == $sources["rc"]){
-                $success = "PASSED";
-                $testPassed++;
-                printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
-            } else {*/
             $testFailures++;
             $success = "FAILED";
             printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
-            //}
         }
+      // both
     } else if (!$parse && !$interpret){
         exec("php7.4 $parsePath < ".$sources[$i]["src"],$output["out"],$output["rc"]);
         $output["out"] = implode("\n",$output["out"]);
@@ -296,7 +286,7 @@ for ($i=0; $i < count($sources); $i++) {
             } else {
                 $input = $sources[$i]["in"];
             }
-            exec("php7.4 $parsePath < ".$sources[$i]["src"]." | python3.6 $intPath --input=".$input,$output["out"],$output["rc"]);
+            exec("php7.4 $parsePath < ".$sources[$i]["src"]." | python3.8 $intPath --input=".$input,$output["out"],$output["rc"]);
             $output["out"] = implode("\n",$output["out"]);
             if ($output["rc"] == $sources[$i]["rc"]){
                 if ($output["rc"] != 0){
@@ -309,9 +299,17 @@ for ($i=0; $i < count($sources); $i++) {
 			        if($output["out"] != "")
 			        	$output["diff"] = $output["out"];
 			        else
-				        $output["diff"] = NULL;
+				        $success = "PASSED";
+                        $testPassed++;
+                        printTest($sources[$i]["src"],$rc, $sources[$i]["rc"], $success);
 		        } else {
-			        exec("echo -n ".$output["out"]." | diff ".$sources[$i]["out"]." -", $output["diff"], $rc);
+		        	$file = fopen("tempFile.out","w");
+            		if (!$file)
+                		exit(12);
+            		fwrite($file,$output["out"]);
+            		fclose($file);
+			        exec("diff -q --ignore-space-change tempFile.out ".$sources[$i]["out"], $output["diff"], $rc);
+			        unlink("tempFile.out");
 			        if ($rc){
                         $testFailures++;
                         $success = "FAILED";
@@ -322,8 +320,63 @@ for ($i=0; $i < count($sources); $i++) {
                         printTest($sources[$i]["src"],$rc, $sources[$i]["rc"], $success);
                     }
 		        }
+            } else {
+                $testFailures++;
+                $success = "FAILED";
+                printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
             }
         }
+        //int-only
+    } else if (!$parse && $interpret){
+    	if (isXmlStructureValid($sources[$i]["src"]) == false) {
+        	$jumped++;
+        	continue;
+    	}
+    	$input = "";
+        if ($sources[$i]["in"] == ''){
+            $input = $sources[$i]["src"];
+        } else {
+            $input = $sources[$i]["in"];
+        }
+        exec("python3.8 $intPath --input=".$input." <".$sources[$i]["src"], $output["out"], $output["rc"]);
+        $output["out"] = implode("\n",$output["out"]);
+        if ($output["rc"] == $sources[$i]["rc"]){
+            if ($output["rc"] != 0){
+                $success = "PASSED";
+                $testPassed++;
+                printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
+                continue;
+            }
+            if($sources[$i]["out"] === ""){
+		        if($output["out"] != "")
+		        	$output["diff"] = $output["out"];
+		        else
+			        $success = "PASSED";
+                    $testPassed++;
+                    printTest($sources[$i]["src"],$rc, $sources[$i]["rc"], $success);
+	        } else {
+	        	$file = fopen("tempFile.out","w");
+        		if (!$file)
+            		exit(12);
+        		fwrite($file,$output["out"]);
+        		fclose($file);
+		        exec("diff -q --ignore-space-change tempFile.out ".$sources[$i]["out"], $output["diff"], $rc);
+		        unlink("tempFile.out");
+		        if ($rc){
+                    $testFailures++;
+                    $success = "FAILED";
+                    printTest($sources[$i]["src"],$rc, $sources[$i]["rc"], $success);
+                } else {
+                    $success = "PASSED";
+                    $testPassed++;
+                    printTest($sources[$i]["src"],$rc, $sources[$i]["rc"], $success);
+                }
+            }
+        } else {
+            $testFailures++;
+            $success = "FAILED";
+            printTest($sources[$i]["src"],$output["rc"], $sources[$i]["rc"], $success);
+    	}
     }
 }
 printHTMLEnd($testPassed,$testFailures, (count($sources)-$jumped));
