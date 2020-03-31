@@ -23,7 +23,7 @@ statsFile = None
     returns sourceFile (if defined), inputFile (if defined), 
     statsFile (if defined) or exits with proper exit code
 """
-def arg_handler():
+def argHandler():
     argsparser = argparse.ArgumentParser(description="Loads XML code, transforms it to IPPcode20 and executes it")
     argsparser.add_argument("--source", nargs=1, help="Input file with XML code")
     argsparser.add_argument("--input", nargs=1, help="File with inputs(f.e. instruction READ)")
@@ -284,6 +284,8 @@ def mySwitch(argument):
                 "DIVS": divs,
                 "INT2FLOATS": int2floats,
                 "FLOAT2INTS": float2ints}
+    if argument[1][0] not in switcher:
+        sys.exit(32)
     execs = switcher.get(argument[1][0], lambda: "Wrong instruction!\n")
     return execs(argument[1])
 
@@ -2081,7 +2083,7 @@ def main():
     global instrPointer
     global instrCounter
     global varCounter
-    sourceFile, inputFile, statsFile = arg_handler()
+    sourceFile, inputFile, statsFile = argHandler()
     sys.stdin = inputFile
     instr = readSource(sourceFile)
     hashTable["GF"] = {}
@@ -2090,6 +2092,7 @@ def main():
         if instr[i][1][0] == 'LABEL':
             createLabel(instr[i])
 
+    # execution of instructions
     while instrPointer < len(instr):
         instrPointerBefore = instrPointer
         flag = False
@@ -2100,6 +2103,7 @@ def main():
             instrCounter += 1
         mySwitch(instr[instrPointer])
 
+        # because of jump instructions
         if instrPointer != instrPointerBefore:
             instrCounter += 1
 
@@ -2108,6 +2112,7 @@ def main():
         else:
             instrPointer += 1
 
+        # counting variables
         if statsFile is not None:
             counter = 0
             for var in hashTable["GF"]:
@@ -2125,6 +2130,7 @@ def main():
                             counter += 1
             varCounter = max(varCounter, counter)
 
+    # writing stats into the file
     if statsFile is not None:
         for argv in sys.argv:
             if argv == '--insts':
