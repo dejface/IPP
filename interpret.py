@@ -11,6 +11,8 @@ import argparse
 import sys
 
 # GLOBAL variables
+from collections import Counter
+
 hashTable = {}
 stackOfFrames = list()
 stackOfVars = list()
@@ -67,12 +69,13 @@ def argHandler():
    order, instruction, params
 """
 def readSource(sourceFile):
+    orderList = list()
     dictOfInstructions = {}
     okCheck = False
     try:
         tree = ET.parse(sourceFile).getroot()
     except:
-        sys.exit(32)
+        sys.exit(31)
 
     for attrib, item in tree.attrib.items():
         if attrib == "language" and item == "IPPcode20":
@@ -85,8 +88,14 @@ def readSource(sourceFile):
     for instruction in tree:
         if len(instruction.attrib) != 2:
             sys.exit(32)
+        if instruction.tag != 'instruction':
+            sys.exit(32)
+
         order = instruction.attrib["order"]
+        orderList.append(order)
         opcode = instruction.attrib["opcode"]
+        if [k for k, v in Counter(orderList).items() if v > 1]:
+            sys.exit(32)
 
         if opcode == "none" or order is None:
             sys.exit(32)
@@ -99,6 +108,9 @@ def readSource(sourceFile):
         try:
             for i in range(len(instruction)):
                 xmlArg = instruction.find("arg" + str(i + 1))
+                if xmlArg is None:
+                    err.append(32)
+                    raise
                 if xmlArg.attrib["type"] not in types:
                     err.append(53)
                     raise
@@ -122,6 +134,8 @@ def readSource(sourceFile):
                 sys.exit(err.pop(len(err)-1))
             else:
                 sys.exit(31)
+        if order in instructions:
+            sys.exit(32)
         instructions[int(order)].append(str(opcode).upper())
         instructions[int(order)].append(args)
         dictOfInstructions.update(instructions)
@@ -129,12 +143,13 @@ def readSource(sourceFile):
                 (instruction.text and instruction.text.strip() != ""):
             sys.exit(31)
     dictOfInstructions = sorted(dictOfInstructions.items(), key=lambda x: x[0])
-    for order, val in dictOfInstructions:
-        if order < 0:
-            sys.exit(32)
     if (tree.tail and tree.tail.strip() != "") or \
             (tree.text and tree.text.strip() != ""):
         sys.exit(31)
+
+    for order, val in dictOfInstructions:
+        if order < 1:
+            sys.exit(32)
 
     return dictOfInstructions
 
@@ -1339,7 +1354,7 @@ def exitInstr(argument):
 
 # this functions creates label before the interpretation of code
 # LABEL ⟨label⟩
-def createLabel(argument):
+def createLabel(argument, index):
     global instrPointer
     if (len(argument[1][1])) != 1:
         sys.exit(32)
@@ -1349,7 +1364,7 @@ def createLabel(argument):
 
     if argument[1][1][0][1] in hashTable["label"]:
         sys.exit(52)
-    hashTable["label"][argument[1][1][0][1]] = argument[0] - 1
+    hashTable["label"][argument[1][1][0][1]] = index
 
 
 # pass because of createLabel
@@ -2090,7 +2105,7 @@ def main():
     hashTable["label"] = {}
     for i in range(0, len(instr)):
         if instr[i][1][0] == 'LABEL':
-            createLabel(instr[i])
+            createLabel(instr[i], i)
 
     # execution of instructions
     while instrPointer < len(instr):
