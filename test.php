@@ -1,6 +1,6 @@
 <?php
 /*
- * IPP Project 2 (bonus in Project 1)
+ * IPP Project 2
  * Author: David Oravec (xorave05)
  * File: test.php
  * About: Simple script which automatically tests functionality of
@@ -160,7 +160,7 @@ function printHTMLHead(){
 <style>
 	table, th, td {
   border: 1px solid black;
-}	
+}
 </style>
 	<meta charset=\"utf-8\">
 	<title>Results of tests</title>
@@ -328,10 +328,6 @@ for ($i=0; $i < count($sources); $i++) {
         }
         //int-only
     } else if (!$parse && $interpret){
-    	if (isXmlStructureValid($sources[$i]["src"]) == false) {
-        	$jumped++;
-        	continue;
-    	}
     	$input = "";
         if ($sources[$i]["in"] == ''){
             $input = $sources[$i]["src"];
