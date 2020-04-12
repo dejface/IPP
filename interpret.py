@@ -9,9 +9,9 @@ Description:
 import xml.etree.ElementTree as ET
 import argparse
 import sys
+from collections import Counter
 
 # GLOBAL variables
-from collections import Counter
 
 hashTable = {}
 stackOfFrames = list()
@@ -25,6 +25,7 @@ statsFile = None
     returns sourceFile (if defined), inputFile (if defined), 
     statsFile (if defined) or exits with proper exit code
 """
+
 def argHandler():
     argsparser = argparse.ArgumentParser(description="Loads XML code, transforms it to IPPcode20 and executes it")
     argsparser.add_argument("--source", nargs=1, help="Input file with XML code")
@@ -68,6 +69,7 @@ def argHandler():
    returns dict of instruction which contains:
    order, instruction, params
 """
+
 def readSource(sourceFile):
     orderList = list()
     dictOfInstructions = {}
@@ -102,7 +104,10 @@ def readSource(sourceFile):
 
         array = ["\n", " ", "\t", "\v", "\f", "\r", "#"]  # these are forbidden chars
         types = ["string", "int", "var", "type", "nil", "bool", "label", "float"]
-        instructions = {int(order): list()}
+        try:
+            instructions = {int(order): list()}
+        except:
+            sys.exit(32)
         args = list()
         err = list()
         try:
@@ -131,7 +136,7 @@ def readSource(sourceFile):
                     raise
         except:
             if len(err) != 0:
-                sys.exit(err.pop(len(err)-1))
+                sys.exit(err.pop(len(err) - 1))
             else:
                 sys.exit(31)
         if order in instructions:
@@ -139,7 +144,7 @@ def readSource(sourceFile):
         instructions[int(order)].append(str(opcode).upper())
         instructions[int(order)].append(args)
         dictOfInstructions.update(instructions)
-        if (instruction.tail and instruction.tail.strip() != "") or\
+        if (instruction.tail and instruction.tail.strip() != "") or \
                 (instruction.text and instruction.text.strip() != ""):
             sys.exit(31)
     dictOfInstructions = sorted(dictOfInstructions.items(), key=lambda x: x[0])
@@ -157,8 +162,9 @@ def readSource(sourceFile):
 """
     returns True if var is valid operand, otherwise False
 """
+
 def checkSymb(var):
-    if var == 'string' or var == 'int' or var == 'bool' or var == 'nil'\
+    if var == 'string' or var == 'int' or var == 'bool' or var == 'nil' \
             or var == 'float':
         return True
     else:
@@ -168,6 +174,7 @@ def checkSymb(var):
 """
     edit var and returns prefix and sufix to hashTable
 """
+
 def editVar(var):
     if var.find("@") == -1:
         sys.exit(32)
@@ -183,20 +190,34 @@ def editVar(var):
 
 """
     removes escape sequences from strings
-    this function was created with big help of stackoverflow
 """
+
 def changeString(str):
-    for index, change in enumerate(str.split("\\")):
-        if index == 0:
-            str = change
+    out = ""            # stores output string
+    isEscape = False    # for escape sequences
+    escVal = ""         # temp var for escape sequences
+
+    for i in str:
+        if isEscape is True:    # escape sequence
+            escVal += i
+            if len(escVal) == 3:    # escape sequence of 3 chars was loaded
+                out += chr(int(escVal))     # converting
+                escVal = ""
+                isEscape = False
+        # handling for non-escaped chars
         else:
-            str = str + chr(int(change[0:3])) + change[3:]
-    return str
+            if i != "\\":
+                out += i
+            else:
+                isEscape = True
+
+    return out
 
 
 """
     checks if operand is correct
 """
+
 def checkErr(var, expected1, expected2, *symb):
     if var != 'var':
         return 32
@@ -216,6 +237,7 @@ def checkErr(var, expected1, expected2, *symb):
 """
     checks if prefix and suffix are initialized in hashTable
 """
+
 def inTable(pref, suf):
     if pref not in hashTable:
         return 55
@@ -227,6 +249,7 @@ def inTable(pref, suf):
 """
     gets value from var which is in hashTable
 """
+
 def fromTable(arg):
     pref, suf = editVar(arg)
     code = inTable(pref, suf)
@@ -242,6 +265,7 @@ def fromTable(arg):
 """
     function which imitates switch like in C
 """
+
 def mySwitch(argument):
     switcher = {"MOVE": move,
                 "CREATEFRAME": createframe,
@@ -455,7 +479,6 @@ def add(argument):
 
 # SUB ⟨var⟩ ⟨symb1⟩ ⟨symb2⟩
 def sub(argument):
-
     if (len(argument[1])) != 3:
         sys.exit(32)
 
@@ -1064,7 +1087,10 @@ def read(argument):
     try:
         result = input()
     except:
-        result = ""
+        if EOFError:
+            result = 'nil'
+        else:
+            result = ""
 
     if type == 'int' or type == 'string' or type == 'bool' or type == 'float':
         if type == 'int':
@@ -1078,13 +1104,15 @@ def read(argument):
         elif type == 'string':
             if result == "":
                 hashTable[destPrefix][destSuffix] = ('string', '')
+            elif result == 'nil':
+                hashTable[destPrefix][destSuffix] = ('nil', 'nil')
             else:
                 try:
                     hashTable[destPrefix][destSuffix] = ('string', str(result))
                 except:
                     hashTable[destPrefix][destSuffix] = ('nil', 'nil')
         elif type == 'bool':
-            if result == "":
+            if result == "" or result == 'nil':
                 hashTable[destPrefix][destSuffix] = ('nil', 'nil')
             else:
                 if str(result).lower() != 'true':
